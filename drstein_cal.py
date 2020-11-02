@@ -10,7 +10,7 @@ from lmfit import Minimizer, Parameters, report_fit
 
 ##This code calibrates the helmholtz coil, the magnetic flux is read from FH55 with it's analog output. The analog output has the range -3V to 3V and the following
 ##sampling/measurement the range is set to 300G. The current through the coil is sourced with this code, the array values are given in the range of from 0 to 4095,
-##corrisponding to -10V to 10V from the daq. This voltage is used to signal a amplifier with two powersupplies set to V_-=-25V and V_+=25V
+##corresponding to -10V to 10V from the daq. This voltage is used to signal a amplifier with two powersupplies set to V_-=-25V and V_+=25V
 
 ##This code returns the file output.dat which incluedes the sourced voltage and the measured magnetic flux in gauss.
 
