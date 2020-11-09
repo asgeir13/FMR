@@ -4,9 +4,12 @@ import pickle
 import pyvisa
 import time
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 def takecal(caltype, nave, nfpoints):
+    global S11
     S11 = np.zeros(nfpoints, dtype=np.complex128)
+    
     # Preparing for calibration
     while True:
         resp = input(f"c to continue if your {caltype} is ready, q to quit: ")
@@ -25,19 +28,18 @@ def takecal(caltype, nave, nfpoints):
     while True:
         # loop over nave, do the calibration
         #S11 = (np.random.random() + 1j) * np.ones(nfpoints)
+        global freq
         real_p, imag_p, freq = measure()
-        S11= real_p+1j*imag_p
-        n=0
-        while n<nave:
-            real_p, imag_p, freq=measure()
-            S11=S11+real_p+1j*imag_p
-            n+=1
-        S11=S11/(nave-1)
-        ax.clear()
-        ax1.clear()
-        ax.plot(freq,S11.real)
-        ax1.plot(freq,S11.imag)
+        S11=np.array([real_p+1j*imag_p], dtype=complex)
+        plt.ion()
         plt.show()
+        for n in range(nave):
+            real_p, imag_p, freq=measure()
+            S11=np.vstack([S11, [real_p+1j*imag_p]])
+            
+        anim = FuncAnimation(fig, Teikna(ax, ax1), frames=nave, interval=500, blit=True, repeat=False)
+        plt.pause(5)
+        
 
         # enddo the calibration
         resp = input("r to repeat calibration, c to continue, q to quit: ")
@@ -102,6 +104,26 @@ def docal(S11m, Edf, Erf, Esf):
     return S11a, Za
 
 
+class Teikna:
+    def __init__(self, ax, ax1):
+        self.line, = ax.plot([], [])
+        self.line1, = ax1.plot([], [])
+        self.freq = freq
+        self.ax = ax
+        self.ax1 = ax1
+
+        self.ax.set_xlim(freq[0], freq[-1])
+        self.ax.set_ylim(-150,150)
+        self.ax1.set_xlim(freq[0], freq[-1])
+        self.ax1.set_ylim(-150,150)
+
+    def __call__(self, i):
+
+        S11plot=np.mean(S11[:i+1,], axis=0)
+        self.line.set_data(self.freq, S11plot.real)
+        self.line1.set_data(self.freq, S11plot.imag)
+        return self.line, self.line1,
+        
 fig = plt.figure()
 ax = fig.add_subplot(1,2,1)
 ax1 = fig.add_subplot(1,2,2)
@@ -140,7 +162,7 @@ S11a, Za = docal(S11m, Edf, Erf, Esf)
 Resist = Za.real
 React = Za.imag
 
-inst.close()
+#inst.close()
 rm.close()
 
 # data = {"a": 1, "b": 2, "calib": S11li, "name": 'Snorri'}
