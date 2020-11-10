@@ -1,5 +1,4 @@
 import numpy as np
-# import matplotlib.pyplot as plt
 import pickle
 import pyvisa
 import time
@@ -30,16 +29,22 @@ def takecal(caltype, nave, nfpoints):
         #S11 = (np.random.random() + 1j) * np.ones(nfpoints)
         global freq
         real_p, imag_p, freq = measure()
-        S11=np.array([real_p+1j*imag_p], dtype=complex)
-        plt.ion()
-        plt.show()
+        #S11=np.array([real_p+1j*imag_p], dtype=complex)
+        S11=real_p+1j*imag_p
+        ax.plot(freq, real_p)
+        ax1.plot(freq, imag_p)
+        plt.draw()
+        plt.pause(1)
         for n in range(nave):
             real_p, imag_p, freq=measure()
-            S11=np.vstack([S11, [real_p+1j*imag_p]])
-            
-        anim = FuncAnimation(fig, Teikna(ax, ax1), frames=nave, interval=500, blit=True, repeat=False)
-        plt.pause(5)
-        
+            S11=(S11*(n+1)+real_p+1j*imag_p)/(n+2)
+            ax.clear()
+            ax1.clear()
+            ax.plot(freq, real_p)
+            ax1.plot(freq, imag_p)
+            plt.draw()
+            plt.pause(1)
+
 
         # enddo the calibration
         resp = input("r to repeat calibration, c to continue, q to quit: ")
@@ -81,11 +86,6 @@ def measure():
     imag_part=new_valu[1:-1:2]
     imag_part.append(new_valu[-1])
     imag_part=np.array(imag_part)
-    #ax.plot(new_fre_val, real_part)
-    #ax1.plot(new_fre_val, imag_part)
-    #plt.show()
-    #time.sleep(3)
-    #plt.close()
     return real_part, imag_part, new_fre_val
 
 def calcorr(S11s, S11o, S11l):
@@ -104,26 +104,6 @@ def docal(S11m, Edf, Erf, Esf):
     return S11a, Za
 
 
-class Teikna:
-    def __init__(self, ax, ax1):
-        self.line, = ax.plot([], [])
-        self.line1, = ax1.plot([], [])
-        self.freq = freq
-        self.ax = ax
-        self.ax1 = ax1
-
-        self.ax.set_xlim(freq[0], freq[-1])
-        self.ax.set_ylim(-150,150)
-        self.ax1.set_xlim(freq[0], freq[-1])
-        self.ax1.set_ylim(-150,150)
-
-    def __call__(self, i):
-
-        S11plot=np.mean(S11[:i+1,], axis=0)
-        self.line.set_data(self.freq, S11plot.real)
-        self.line1.set_data(self.freq, S11plot.imag)
-        return self.line, self.line1,
-        
 fig = plt.figure()
 ax = fig.add_subplot(1,2,1)
 ax1 = fig.add_subplot(1,2,2)
