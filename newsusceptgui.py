@@ -31,77 +31,52 @@ if dev is None:
     print('Error (%d) %s',errno, comedi.comedi_strerror(errno))
 
 
-def popup_bonus():
-    win = tk.Toplevel()
-    win.wm_title("Save calibration")
-
-    l = tk.Label(win, text="Write \"open\", \"short\" and \"load\" for the corresponding measurements in the entry." )
-    l.pack()
-    b=tk.Button(win, text="Okay", command=win.destroy)
-    b.pack()
-
-def popup_showinfo():
-    showinfo("Window", "Hello world!")
-
-def set_values():
-    
 
 
-def popup_initial_value():
-    win = tk.Toplevel()
-    win.wm_title("Initial values")
-    fram1=tk.Frame(win, bg='white')
-    fram1.pack()
-    labelsweep=tk.Label(fram1, text="Sweep setup", bg='white')
-    labelsweep.pack(side=LEFT)
+class App(tk.Tk):
+    #def __init__(self):
+        #tk.Tk.__init__(self)
+        #self._frame=None
+        #self.switch_frame(StartPage)
 
-    fram2=tk.Frame(win, bg='white')
-    fram2.pack()
-
-    labelstart=tk.Label(fram2, text="Start", bg='white')
-    labelstart.pack(side=LEFT, padx=5, pady=5)
-    startentry=tk.Entry(fram2, width=5, bg='white')
-    startentry.pack(side=LEFT)
-    startentry.insert("40")
-    labelunit=tk.Label(fram2, text="MHz", bg='white')
-    labelunit.pack(side=LEFT)
-    
-    fram3=tk.Frame(win, bg='white')
-    fram3.pack()
-
-    labelstop=tk.Label(fram3, text="Stop", bg='white')
-    labelstop.pack(side=LEFT, padx=5, pady=5)
-    stopentry=tk.Entry(fram3, width=5, bg='white')
-    stopentry.pack(side=LEFT)
-    stopentry.insert("20000")
-    labelunit1=tk.Label(fram3, text="MHz", bg='white')
-    labelunit1.pack(side=LEFT)
-
-    fram4=tk.Frame(win, bg='white')
-    fram4.pack()
-    label4=tk.Label(fram4, text="Calibration setup", bg='white')
-    label4.pack(side=LEFT)
-
-    fram5=tk.Frame(win, bg='white')
-    fram5.pack()
-    labelnumber=tk.Label(fram5, text="Nr. of measurements", bg='white')
-    labelnumber.pack(side=LEFT)
-    numberentry=tk.Entry(fram5, width=5, bg='white')
-    numberentry.pack(side=LEFT)
-
-    fram6=tk.Frame(win, bg='white')
-    fram6.pack()
-    setbutton=tk.Button(fram6, text="Set values", command=set_values)
-    setbutton.pack()
+    #def switch_frame(self, frame_class):
+        #new_frame = frame_class(self)
+        #if self._frame is not None:
+            #self._frame.destroy()
+        #self._frame = new_frame
+        #self._frame.pack()
 
 
+    def __init__(self, *args, **kwargs):
+
+        tk.Tk.__init__(self, *args, **kwargs)
+        container = tk.Frame(self)
+        container.pack(side=TOP, fill=BOTH, expand=True)
+
+        container.grid_rowconfigure(0, weight = 1)
+        container.grid_columnconfigure(0, weight = 1)
+
+        self.frames = {}
+
+        for F in (StartPage, Page1):
+
+            frame = F(container, self)
+
+            self.frames[F] = frame
+
+            frame.grid(row = 0, column = 0, sticky="nsew")
+
+        self.show_frame(StartPage)
+
+    def show_frame(self, cont):
+        frame = self.frames[cont]
+        frame.tkraise()
 
 
-
-class App(tk.Frame):
-    def __init__(self, master):
-        super().__init__(master)
-        self.pack()
+class StartPage(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        
 
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(1,2,1)
@@ -112,48 +87,29 @@ class App(tk.Frame):
         toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
 
-
         frame1 = tk.Frame(self, bg="white")
         frame1.pack(fill=X)
-
-        self.label = tk.Label(frame1, text="Set value for magnetic flux", bg='white')
-        self.label.pack(side=LEFT, padx=5, pady=5)
+        self.label = tk.Label(frame1, text="Set value for magnetic flux", bg='white').pack(side=LEFT, padx=5, pady=5)
         self.entry = tk.Entry(frame1,text="50", width=5, bg="white")
-        self.entry.insert(0,"0")
+        self.entry.insert(0, "0")
         self.entry.pack(side=LEFT)
-        self.labelunit = tk.Label(frame1, text="G", bg='white')
-        self.labelunit.pack(side=LEFT)
-        
+        self.labelunit = tk.Label(frame1, text="G", bg='white').pack(side=LEFT)
         frame2 = tk.Frame(self, bg='white')
         frame2.pack(fill=X)
-        
-        self.btn=tk.Button(frame2, text="Reset magnet", command=self.zerofield)
-        self.btn.pack(side=LEFT, padx=5)
-        self.btn1= tk.Button(frame2, text="Turn on magnet", command=self.writevolt)
-        self.btn1.pack(side=LEFT, padx=5)
-
+        self.btn=tk.Button(frame2, text="Reset magnet", command=self.zerofield).pack(side=LEFT, padx=5)
+        self.btn1= tk.Button(frame2, text="Turn on magnet", command=self.writevolt).pack(side=LEFT, padx=5)
         frame3= tk.Frame(self, bg='white')
         frame3.pack(fill=X)
-        self.popup=tk.Button(frame3, text="Help", command=popup_bonus)
-        self.popup.pack(side=LEFT, padx=5, pady=5)
-        self.entry1 = tk.Entry(frame3, width = 6, bg='white')
-        self.entry1.pack(side=LEFT, padx=5, pady=5)
-
+        #self.popup=tk.Button(frame3, text="Help", command=popup_bonus)
+        #self.popup.pack(side=LEFT, padx=5, pady=5)
+        self.entry1 = tk.Entry(frame3, width = 6, bg='white').pack(side=LEFT, padx=5, pady=5)
         frame4 = tk.Frame(self, bg='white')
         frame4.pack(fill=X)
-        
-        self.btninitial=tk.Button(frame4, text="Set initial values", command=popup_initial_value)
-        self.btninitial.pack(side=LEFT)
-
-        self.btncalibrate=tk.Button(frame4, text="Calibrate", command=self.takecal)
-        self.btncalibrate.pack(side=LEFT, padx=5, pady=5)
-        
-
-        self.btnexit=tk.Button(frame4, text="exit", command=tkint.destroy)
-        self.btnexit.pack(side=RIGHT)
-        
-        self.btnsave=tk.Button(frame4, text="save", command=self.save)
-        self.btnsave.pack(side=LEFT)
+        self.btninitial=tk.Button(frame4, text="Set initial values", command=lambda: master.switch_frame(Page1)).pack(side=LEFT)
+        self.btncalibrate=tk.Button(frame4, text="Calibrate", command=self.takecal).pack(side=LEFT, padx=5, pady=5)
+        #self.btnexit=tk.Button(frame4, text="exit", command=tkint.destroy)
+        #self.btnexit.pack(side=RIGHT)
+        self.btnsave=tk.Button(frame4, text="save", command=self.save).pack(side=LEFT)
     
 
     #### Set magnetic field
@@ -283,6 +239,53 @@ class App(tk.Frame):
         return S11
 
 
+class Page1(tk.Frame):
+
+    def __init__(self, parent, controller):
+
+        tk.Frame.__init__(self, parent)
+
+        self.fram1=tk.Frame(self, bg='white').pack()
+        self.labelsweep=tk.Label(self.fram1, text="Sweep setup", bg='white').pack(side=LEFT)
+
+        self.fram2=tk.Frame(self, bg='white').pack()
+
+        self.labelstart=tk.Label(self.fram2, text="Start", bg='white').pack(side=LEFT, padx=5, pady=5)
+        self.startentry=tk.Entry(self.fram2, width=5, bg='white').pack(side=LEFT)
+        #self.startentry.insert("40")
+        self.labelunit=tk.Label(self.fram2, text="MHz", bg='white').pack(side=LEFT)
+    
+        self.fram3=tk.Frame(self, bg='white').pack()
+
+        self.labelstop=tk.Label(self.fram3, text="Stop", bg='white').pack(side=LEFT, padx=5, pady=5)
+        self.stopentry=tk.Entry(self.fram3, width=5, bg='white').pack(side=LEFT)
+        #self.stopentry.insert("20000")
+        self.labelunit1=tk.Label(self.fram3, text="MHz", bg='white').pack(side=LEFT)
+
+        self.fram4=tk.Frame(self, bg='white').pack()
+        self.label4=tk.Label(self.fram4, text="Calibration setup", bg='white').pack(side=LEFT)
+
+        self.fram5=tk.Frame(self, bg='white').pack()
+        self.labelnumber=tk.Label(self.fram5, text="Nr. of measurements", bg='white').pack(side=LEFT)
+        self.numberentry=tk.Entry(self.fram5, width=5, bg='white').pack(side=LEFT)
+
+        self.fram6=tk.Frame(self, bg='white').pack()
+        #self.setbutton=tk.Button(fram6, text="Set values", command=set_values)
+        #self.setbutton.pack()
+
+        self.startpage=tk.Button(self.fram6, text="Exit", command=lambda : master.switch_frame(StartPage)).pack()
+   
+    def popup_bonus(self):
+        l = tk.Label(self, text="Write \"open\", \"short\" and \"load\" for the corresponding measurements in the entry." )
+        l.pack()
+        b=tk.Button(self, text="Okay", command=win.destroy)
+        b.pack()
+
+    def popup_showinfo():
+        showinfo("Window", "Hello world!")
+
+
+
 #some initial values
 nfpoints = 401
 nave = 10
@@ -306,7 +309,5 @@ inst.write("FMA") #Select ASCII data transfer format
 #plt.ion()   
 #plt.show()
 comedi.comedi_close(dev)
-tkint = tk.Tk()
-tkint.title("FMR")
-myapp = App(tkint)
-myapp.mainloop()
+app = App() 
+app.mainloop()

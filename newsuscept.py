@@ -116,7 +116,7 @@ S11a = S11m = Za = np.zeros(nfpoints, dtype=np.complex128)
 Edf = Erf = Esf = np.zeros(nfpoints, dtype=np.complex128)
 freq = np.zeros(nfpoints, dtype=np.float64)
 
-rm = pyvisa.ResourceManager()
+rm = pyvisa.ResourceManager('@py')
 inst = rm.open_resource('GPIB0::6::INSTR')
 inst.write("S11")
 start=input('Start frequency: ')
@@ -127,6 +127,8 @@ inst.write(start)
 inst.write(stop)
 
 inst.write("FMA") #Select ASCII data transfer format
+
+
 print(inst.query("DPRX?"))
 
 
@@ -137,10 +139,32 @@ S11l = takecal("LOAD", nave, nfpoints)
 S11s = takecal("SHORT", nave, nfpoints)
 Edf, Erf, Esf = calcorr(S11s, S11o, S11l)
 # do actual measurement(s) ==> S11m measurement
-S11m = (np.random.random(nfpoints) + 1j*np.random.random(nfpoints))
-S11a, Za = docal(S11m, Edf, Erf, Esf)
-Resist = Za.real
-React = Za.imag
+
+ready=input("Ready for measurement? y/n: ")
+while True:
+    if ready== "y":
+        print(f"{ready} was written")
+        real_p, imag_p, freq=measure()
+        S11m=real_p+1j*imag_p
+        S11a, Za = docal(S11m, Edf, Erf, Esf)
+        Resist = Za.real
+        React = Za.imag
+        ax.clear()
+        ax1.clear()
+        ax.plot(freq, real_p)
+        ax1.plot(freq, imag_p)
+        plt.draw()
+        plt.pause(1)
+
+
+        break
+    elif ready== "n":
+        ready=input("Ready for measurement? y/n")
+    else:
+        print("That input is not expected")
+        ready=input("Ready for measuremen? y/n")
+        
+
 
 #inst.close()
 rm.close()
