@@ -1,7 +1,6 @@
-import comedi
+#import comedi
 import time
 import numpy as np
-from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 from statistics import mean
 import matplotlib.animation as animation
@@ -14,21 +13,21 @@ import pyvisa
 from tkinter.messagebox import showinfo
 
 #### Comedi setup, configuration for read and write
-subdevr, chanr, rngr, aref = 0, 0, 1, comedi.AREF_GROUND
-subdevw, chanw, rngw, = 1, 0, 0
-datazero, datawmax = 2048, 4095
-devname="/dev/comedi0"
-dev = comedi.comedi_open(devname)
-path = f=open('/home/at/suscept/magnari/Mælingar/calib_results.dat')
-lines = (line for line in f if not line.startswith('#'))
-FH = np.loadtxt(lines)
-dev = comedi.comedi_open("/dev/comedi0")
-ranger = comedi.comedi_get_range(dev, subdevr, chanr, rngr)
+#subdevr, chanr, rngr, aref = 0, 0, 1, comedi.AREF_GROUND
+#subdevw, chanw, rngw, = 1, 0, 0
+#datazero, datawmax = 2048, 4095
+#devname="/dev/comedi0"
+#dev = comedi.comedi_open(devname)
+#path = f=open('/home/at/suscept/magnari/Mælingar/calib_results.dat')
+#lines = (line for line in f if not line.startswith('#'))
+#FH = np.loadtxt(lines)
+#dev = comedi.comedi_open("/dev/comedi0")
+#ranger = comedi.comedi_get_range(dev, subdevr, chanr, rngr)
 
 
-if dev is None:
-    errno = comedi.comedi_errno()
-    print('Error (%d) %s',errno, comedi.comedi_strerror(errno))
+#if dev is None:
+    #errno = comedi.comedi_errno()
+    #print('Error (%d) %s',errno, comedi.comedi_strerror(errno))
 
 
 def popup_bonus():
@@ -42,8 +41,6 @@ def popup_bonus():
 
 def popup_showinfo():
     showinfo("Window", "Hello world!")
-
-def set_values():
     
 
 
@@ -62,7 +59,7 @@ def popup_initial_value():
     labelstart.pack(side=LEFT, padx=5, pady=5)
     startentry=tk.Entry(fram2, width=5, bg='white')
     startentry.pack(side=LEFT)
-    startentry.insert("40")
+    #startentry.insert("40")
     labelunit=tk.Label(fram2, text="MHz", bg='white')
     labelunit.pack(side=LEFT)
     
@@ -73,7 +70,7 @@ def popup_initial_value():
     labelstop.pack(side=LEFT, padx=5, pady=5)
     stopentry=tk.Entry(fram3, width=5, bg='white')
     stopentry.pack(side=LEFT)
-    stopentry.insert("20000")
+    #stopentry.insert("20000")
     labelunit1=tk.Label(fram3, text="MHz", bg='white')
     labelunit1.pack(side=LEFT)
 
@@ -289,23 +286,23 @@ nave = 10
 
 
 
-rm = pyvisa.ResourceManager('@py')
-inst = rm.open_resource('GPIB0::6::INSTR')
-inst.write("S11")
-#start=input('Start frequency: ')
-start="40"
-start="SRT"+start+" MHz"
-#stop=input('Stop frequency: ')
-stop="20000"
-stop="STP"+stop+" MHz"
-inst.write(start)
-inst.write(stop)
+#rm = pyvisa.ResourceManager('@py')
+#inst = rm.open_resource('GPIB0::6::INSTR')
+#inst.write("S11")
+##start=input('Start frequency: ')
+#start="40"
+#start="SRT"+start+" MHz"
+##stop=input('Stop frequency: ')
+#stop="20000"
+#stop="STP"+stop+" MHz"
+#inst.write(start)
+#inst.write(stop)
 
-inst.write("FMA") #Select ASCII data transfer format
+#inst.write("FMA") #Select ASCII data transfer format
 
 #plt.ion()   
 #plt.show()
-comedi.comedi_close(dev)
+#comedi.comedi_close(dev)
 tkint = tk.Tk()
 tkint.title("FMR")
 myapp = App(tkint)

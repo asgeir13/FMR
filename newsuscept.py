@@ -151,8 +151,8 @@ while True:
         React = Za.imag
         ax.clear()
         ax1.clear()
-        ax.plot(freq, real_p)
-        ax1.plot(freq, imag_p)
+        ax.plot(freq, S11a.real)
+        ax1.plot(freq, S11a.imag)
         plt.draw()
         plt.pause(1)
 
