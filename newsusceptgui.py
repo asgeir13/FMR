@@ -1,4 +1,4 @@
-#import comedi
+import comedi
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,25 +9,26 @@ from tkinter.constants import *
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 import itertools
-#import pyvisa
+import pyvisa
 from tkinter.messagebox import showinfo
+import pandas as pd
 
 #### Comedi setup, configuration for read and write
-#subdevr, chanr, rngr, aref = 0, 0, 1, comedi.AREF_GROUND
-#subdevw, chanw, rngw, = 1, 0, 0
-#datazero, datawmax = 2048, 4095
-#devname="/dev/comedi0"
-#dev = comedi.comedi_open(devname)
-#path = f=open('/home/at/suscept/magnari/Mælingar/calib_results.dat')
-#lines = (line for line in f if not line.startswith('#'))
-#FH = np.loadtxt(lines)
-#dev = comedi.comedi_open("/dev/comedi0")
-#ranger = comedi.comedi_get_range(dev, subdevr, chanr, rngr)
+subdevr, chanr, rngr, aref = 0, 0, 1, comedi.AREF_GROUND
+subdevw, chanw, rngw, = 1, 0, 0
+datazero, datawmax = 2048, 4095
+devname="/dev/comedi0"
+dev = comedi.comedi_open(devname)
+path = f=open('/home/at/suscept/magnari/Mælingar/calib_results.dat')
+lines = (line for line in f if not line.startswith('#'))
+FH = np.loadtxt(lines)
+dev = comedi.comedi_open("/dev/comedi0")
+ranger = comedi.comedi_get_range(dev, subdevr, chanr, rngr)
 
 
-#if dev is None:
-    #errno = comedi.comedi_errno()
-    #print('Error (%d) %s',errno, comedi.comedi_strerror(errno))
+if dev is None:
+    errno = comedi.comedi_errno()
+    print('Error (%d) %s',errno, comedi.comedi_strerror(errno))
 
 
 
@@ -72,9 +73,13 @@ class StartPage(tk.Frame):
         self.btncalcorr=tk.Button(self, text="Calc. correction & apply", command=self.docal).grid(row=2,column=0, pady=5, sticky='e')
     
         self.btncalibrate=tk.Button(self, text="Measure", command=self.takecal).grid(row=1, column=0, pady=5, sticky='e')
-        self.entry1 = tk.Entry(self, width = 6, bg='white')
-        self.entry1.grid(row=1,column=1, padx=5, pady=5, sticky='w')
-        self.btnsave=tk.Button(self, text="save", command=self.save).grid(row=1,column=1,pady=5,sticky='n')
+        self.listbox=tk.Listbox(self, height=2, width=12)
+        self.listbox.grid(row=1,column=1)
+        elements=['Open', 'Load', 'Short', 'Measurement']
+        for i, ele in enumerate(elements):
+            self.listbox.insert(i, ele)
+
+        self.btnsave=tk.Button(self, text="save", command=self.save).grid(row=1,column=2,pady=5,sticky='n')
         self.btnask=tk.Button(self, text="save all data", command=self.file_save).grid(row=2, column=1, pady=5, padx=5, sticky='w')
         self.fig = plt.figure(figsize=[9,8])
         self.ax = self.fig.add_subplot(1,2,1)
@@ -91,8 +96,6 @@ class StartPage(tk.Frame):
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
         self.toolbar.grid(row=9, column=0, columnspan=6, sticky='nwe')
         
-
-        
     def docal(self):
         print("Calculating correction for given S11.")
         print("Calculating correction coefficients, the E's")
@@ -103,43 +106,54 @@ class StartPage(tk.Frame):
         S11a = (S11m - Edf)/((S11m - Edf) * Esf + Erf)
         Za = Z0 * (1 + S11a)/(1 - S11a)
         Resist, React = Za.real, Za.imag
+        self.ax.clear()
+        self.ax1.clear()
         self.ax.plot(freq, S11a.real)
         self.ax1.plot(freq, S11a.imag)
         plt.ion()
         self.canvas.draw()
 
     def save(self):
-        text=self.entry1.get()
-        if text == "o":
-            if 'S11o' in dir():
+        global S11o, S11l, S11s, S11m
+       
+        number=self.listbox.curselection()[0]
+        if number == 0:
+            if "S11o" in savelist:
                 print('Replacing prior calibration')
                 S11o=S11
             else:
                 S11o=S11
+                savelist.append("S11o")
                 print("S11o has been saved")
-        elif text == "l":
-            if 'S11l' in dir():
+                print(savelist)
+        elif number == 1:
+            if 'S11l' in savelist:
                 print('Replacing prior calibration')
                 S11l=S11
             else:
                 S11l=S11
+                savelist.append("S11l")
+                print(savelist)
                 print("S11l has been saved")
-        elif text == "s":
-            if 'S11s' in dir():
+        elif number == 2:
+            if 'S11s' in savelist:
                 print('Replacing prior calibration')
                 S11s=S11
             else:
                 S11s=S11
+                savelist.append("S11s")
+                print(savelist)
                 print("S11s has been saved")
-        elif text == "m":
-            if S11o not in dir():
+        elif number == 3:
+            if "S11o" not in savelist:
                 print("Preform calibration for OPEN")
-            elif S11l not in dir():
+            elif "S11l" not in savelist:
                 print("Preform calibration for LOAD")
-            elif S11s not in dir():
+            elif "S11s" not in savelist:
                 print("Preform calibration for SHORT")
             else:
                 S11m=S11
+                print("S11m has been saved")
         else:
             print("Write in the entry which calibration took place!")
 
@@ -148,16 +162,17 @@ class StartPage(tk.Frame):
 
         f = tk.filedialog.asksaveasfile(mode="w", defaultextension="*.txt")
         intro="#FMR data, this file includes calibration measurements, correction factor and corrected S11\n"
-        intro1="#S11a, S11m, S11o, S11l, S11s, Za, Edf, Erf, Esf\n"
-        dataout=np.column_stack((S11a, S11m, S11o, S11l, S11s, Za, Edf, Erf, Esf))
-
+        intro1="freq\tS11m\tS11o\tS11l\tS11s\n"#, Za, Edf, Erf, Esf\n"
+        dataout=np.column_stack((freq, S11m, S11o, S11s, S11l))#.astype(complex)##S11a, S11m, S11o, S11l, S11s, Za, Edf, Erf, Esf))
+        print(dataout[0][0])
         f.write(intro)
-        f.write(intor1)
-        f.write(dataout)
-
-
-
-        f.write("þetta er flottur texti")
+        f.write(intro1)
+        for i in np.arange(len(dataout)):
+            for n in np.arange(len(dataout[0])):
+                f.write(str(dataout[i][n]))
+                f.write("\t")
+            f.write("\n")
+        
         f.close
 
     def measure(self):
@@ -182,9 +197,8 @@ class StartPage(tk.Frame):
         imag_part=np.array(imag_part)
         return real_part, imag_part, new_fre_val
 
-
     def takecal(self):
-        global S11
+        global S11, freq
         S11 = np.zeros(nfpoints, dtype=np.complex128)
         real_p, imag_p, freq = self.measure()
        
@@ -204,38 +218,33 @@ class StartPage(tk.Frame):
             #self.canvas.pause(1)
         return S11
 
-
 class Page1(tk.Frame):
 
     def __init__(self, parent, controller):
 
         tk.Frame.__init__(self, parent)
-        self.labelsweep=tk.Label(self, text="Sweep setup", bg='white').grid(row=0, column=0, sticky="e")
+        self.labelsweep=tk.Label(self, text="Sweep setup").grid(row=0, column=0, sticky="e")
         self.startpage=tk.Button(self, text="return", command=lambda : controller.show_frame(StartPage)).grid(row=0, column=1, pady=10, sticky='e')
 
-        self.labelstart=tk.Label(self, text="Start", bg='white').grid(row=1, column=0, padx=5, pady=10, sticky="e")
-        self.startentry=tk.Entry(self, width=5, bg='white')
+        self.labelstart=tk.Label(self, text="Start").grid(row=1, column=0, padx=5, pady=10, sticky="e")
+        self.startentry=tk.Entry(self, width=5)
         self.startentry.insert(0, "40")
         self.startentry.grid(row=1, column=1)
         
-        self.labelunit=tk.Label(self, text="MHz", bg='white').grid(row=1, column=2)
-
-        self.labelstop=tk.Label(self, text="Stop", bg='white').grid(row=1, column=3, padx=5, pady=5)
-        self.stopentry=tk.Entry(self, width=5, bg='white')
+        self.labelunit=tk.Label(self, text="MHz   stop").grid(row=1, column=2)
+        self.stopentry=tk.Entry(self, width=5)
         self.stopentry.insert(0, "20000")
         self.stopentry.grid(row=1, column=4)
-        self.labelunit1=tk.Label(self, text="MHz", bg='white').grid(row=1, column=5)
+        self.labelunit1=tk.Label(self, text="MHz").grid(row=1, column=5)
 
-        self.label4=tk.Label(self, text="Calibration setup", bg='white').grid(row=2, column=0)
+        self.label4=tk.Label(self, text="Calibration setup").grid(row=2, column=0)
 
-        self.labelnumber=tk.Label(self, text="Nr. of measurements", bg='white').grid(row=3, column=1, columnspan=3, padx=5)
-        self.numberentry=tk.Entry(self, width=5, bg='white')
+        self.labelnumber=tk.Label(self, text="Nr. of meas.").grid(row=3, column=0, padx=5, pady=5)
+        self.numberentry=tk.Entry(self, width=5)
         self.numberentry.insert(0, "10")
-        self.numberentry.grid(row=3, column=2)
+        self.numberentry.grid(row=3, column=1, pady=5)
 
         self.setbtn=tk.Button(self, text="Set values", command=self.set_values).grid(row=4, column=0)
-
-        
    
     def set_values(self):
         start=self.startentry.get()
@@ -248,29 +257,29 @@ class Page2(tk.Frame):
 
         tk.Frame.__init__(self, parent)
 
-        self.label = tk.Label(self, text="Set magnetic flux", bg='white').grid(row=0, column=0, padx=5, pady=10)
-        self.labelpar=tk.Label(self, text="Field parallel", bg='white').grid(row=1,column=0, padx=5, sticky="e")
-        self.entrypar = tk.Entry(self,width=5, bg="white")
+        self.label = tk.Label(self, text="Set magnetic flux").grid(row=0, column=0, padx=5, pady=10)
+        self.labelpar=tk.Label(self, text="Field parallel").grid(row=1,column=0, padx=5, sticky="e")
+        self.entrypar = tk.Entry(self,width=5)
         self.entrypar.insert(0, "0")
         self.entrypar.grid(row=1, column=1)
-        self.labelunitpar = tk.Label(self, text="G", bg='white').grid(row=1, column=2)
+        self.labelunitpar = tk.Label(self, text="G").grid(row=1, column=2)
 
         self.btn=tk.Button(self, text="Reset magnet", command=self.zerofield).grid(row=1, column=4, padx=5)
         self.btn1= tk.Button(self, text="Set", command=self.writevolt).grid(row=1, column=3, padx=5)
         self.btnreturn=tk.Button(self, text="return", command=lambda : controller.show_frame(StartPage)).grid(row=0, column=4)
 
-        self.labelper=tk.Label(self, text="Field perpendicular", bg='white').grid(row=2,column=0, padx=5, sticky="e")
-        self.entryper = tk.Entry(self,width=5, bg="white")
+        self.labelper=tk.Label(self, text="Field perpendicular").grid(row=2,column=0, padx=5, sticky="e")
+        self.entryper = tk.Entry(self,width=5)
         self.entryper.insert(0, "0")
         self.entryper.grid(row=2, column=1)
-        self.labelunitper = tk.Label(self, text="G", bg='white').grid(row=2, column=2)
+        self.labelunitper = tk.Label(self, text="G").grid(row=2, column=2)
 
         self.btnper=tk.Button(self, text="Reset magnet", command=self.zerofield).grid(row=2, column=4, padx=5)
         self.btn1per= tk.Button(self, text="Set", command=self.writevolt).grid(row=2, column=3, padx=5)
     
         
     def writevolt(self):
-        val = self.entry.get()
+        val = self.entrypar.get()
         val = float(val)*FH[0]+FH[1]
         val = int(np.around(val))
         dev = comedi.comedi_open("/dev/comedi0")
@@ -311,8 +320,8 @@ class Page3(tk.Frame):
         self.fig = plt.figure(figsize=[9,8])
         self.ax = self.fig.add_subplot(1,2,1)
         self.ax1 = self.fig.add_subplot(1,2,2)
-        self.ax.set_xlabel('$f$ [GHz]')
-        self.ax1.set_xlabel('$f$ [GHz]')
+        self.ax.set_xlabel('$f$ [MHz]')
+        self.ax1.set_xlabel('$f$ [MHz]')
         self.ax.set_ylabel('S11 resistance [$\Omega$]')
         self.ax1.set_ylabel('S11 reactance [$\Omega$]')
         
@@ -325,18 +334,26 @@ class Page3(tk.Frame):
 
     def file_open(self):
 
-        f=tk.filedialog.askopenfilename()
+        t=tk.filedialog.askopenfilename()
+        #linur=(line for line in f if not line.startswith('#'))
+        self.texti=pd.read_csv(t,index_col=False, comment="#", sep='\t', engine='python')
+        #S11read=texti[texti.columns[1]]
+        #print(complex(S11read[0]).real)
+
+        print(type(self.texti['freq'][1]))
 
     def plot(self):
         selected=self.listbox.curselection()
         print(selected)
         self.ax.clear()
         self.ax1.clear()
-        #self.ax.plot(freq, S11.real)
+        self.ax.set_xlabel('$f$ [MHz]')
+        self.ax1.set_xlabel('$f$ [MHz]')
+        self.ax.set_ylabel('S11 resistance [$\Omega$]')
+        self.ax1.set_ylabel('S11 reactance [$\Omega$]')
+        self.ax.plot(self.texti['freq'], self.texti['S11a'])
         #self.ax1.plot(freq, S11.imag)
         self.canvas.draw()
-
-        
 
 
 def popup_bonus(self):
@@ -349,29 +366,26 @@ def popup_showinfo():
     showinfo("Window", "Hello world!")
 
 
-
 #some initial values
 nfpoints = 401
 nave = 10
+savelist=[]
 
 
+rm = pyvisa.ResourceManager('@py')
+inst = rm.open_resource('GPIB0::6::INSTR')
+inst.write("S11")
+#start=input('Start frequency: ')
+start="40"
+start="SRT"+start+" MHz"
+#stop=input('Stop frequency: ')
+stop="20000"
+stop="STP"+stop+" MHz"
+inst.write(start)
+inst.write(stop)
 
-#rm = pyvisa.ResourceManager('@py')
-#inst = rm.open_resource('GPIB0::6::INSTR')
-#inst.write("S11")
-##start=input('Start frequency: ')
-#start="40"
-#start="SRT"+start+" MHz"
-##stop=input('Stop frequency: ')
-#stop="20000"
-#stop="STP"+stop+" MHz"
-#inst.write(start)
-#inst.write(stop)
+inst.write("FMA") #Select ASCII data transfer format
 
-#inst.write("FMA") #Select ASCII data transfer format
-
-#plt.ion()   
-#plt.show()
-#comedi.comedi_close(dev)
+comedi.comedi_close(dev)
 app = App()
 app.mainloop()
