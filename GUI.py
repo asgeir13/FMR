@@ -3,18 +3,14 @@ import comedi
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-from statistics import mean
-import matplotlib.animation as animation
 import tkinter as tk
 from tkinter.constants import *
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-import itertools
 import pyvisa
-from tkinter.messagebox import showinfo
 import pandas as pd
 
-
+#App class makes the frames and allows easy switching between them
 class App(tk.Tk):
     def __init__(self, *args, **kwargs):
 
@@ -27,7 +23,7 @@ class App(tk.Tk):
         container.grid_columnconfigure(0, weight = 1)
 
         self.frames = {}
-
+        #for-loop to place each page in the container or parent page
         for F in (StartPage, Init, Flux, Viewer):
 
             frame = F(container, self)
@@ -37,7 +33,7 @@ class App(tk.Tk):
             frame.grid(row = 0, column = 0, sticky="nsew")
 
         self.show_frame(StartPage)
-
+    #raises the page to the top with tkraise()
     def show_frame(self, cont):
         frame = self.frames[cont]
         frame.tkraise()
@@ -76,7 +72,8 @@ class StartPage(tk.Frame):
         self.toolbarframe.grid(row=8, column=0, columnspan=70, sticky='nwe')
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
         self.toolbar.grid(row=9, column=0, columnspan=70, sticky='nwe')
-        
+
+        #use open, short, load to calibrate the measurement   
     def docal(self):
         print("Calculating correction for given S11.")
         print("Calculating correction coefficients, the E's")
@@ -98,9 +95,9 @@ class StartPage(tk.Frame):
         self.canvas.draw_idle()
         self.canvas.flush_events()
 
+        #save each measurement to it's corresponding variable
     def save(self):
         global S11o, S11l, S11s, S11m
-       
         number=self.listbox.curselection()[0]
         if number == 0:
             if "S11o" in savelist:
@@ -131,17 +128,18 @@ class StartPage(tk.Frame):
                 print("S11s has been saved")
         elif number == 3:
             if "S11o" not in savelist:
-                print("Preform calibration for OPEN")
+                print("Perform calibration for OPEN")
             elif "S11l" not in savelist:
-                print("Preform calibration for LOAD")
+                print("Perform calibration for LOAD")
             elif "S11s" not in savelist:
-                print("Preform calibration for SHORT")
+                print("Perform calibration for SHORT")
             else:
                 S11m=S11
                 print("S11m has been saved")
         else:
             print("Write in the entry which calibration took place!")
 
+    #saves all the arrays, only applicable after running the docal function
     def file_save(self):
         f = tk.filedialog.asksaveasfile(mode="w", defaultextension="*.txt")
         intro="#FMR data, this file includes calibration measurements, correction factor and corrected S11\n"
@@ -160,15 +158,16 @@ class StartPage(tk.Frame):
             f.write("\n")
         f.close
 
+    #receiving measurements from the network analyzer
     def measure(self):
-        inst.write("OFV")
+        inst.write("OFV") #requesting the frequency values
         fre_val=inst.read("\n")
         fre_val=fre_val.rsplit(", ")
         new_fre_val=fre_val[0].rsplit(" ")
         new_fre_val.extend(fre_val[1:])
         new_fre_val=[float(n) for n in new_fre_val[1:]]
 
-        inst.write("OFD")
+        inst.write("OFD") #requesting the S11 measurements, this returns the real and imag part
         valu=inst.read("\n")
         valu=valu.rsplit(",")
         new_valu=valu[0].rsplit(" ")
@@ -176,12 +175,14 @@ class StartPage(tk.Frame):
         new_valu=[float(n) for n in new_valu[1:]]
         real_part=imag_part=np.arange(len(new_fre_val),dtype=np.float64)
 
-        real_part=np.array(new_valu[0:-1:2])
+        real_part=np.array(new_valu[0:-1:2]) #the complex values are given in pairs
         imag_part=new_valu[1:-1:2]
         imag_part.append(new_valu[-1])
         imag_part=np.array(imag_part)
         return real_part, imag_part, new_fre_val
 
+        #this function measures multiple times by calling the measure funtion, it is called nave times
+        #which is the number of averages
     def takecal(self):
         global S11, freq
         S11 = np.zeros(nfpoints, dtype=np.complex128)
@@ -200,7 +201,7 @@ class StartPage(tk.Frame):
         self.canvas.flush_events()
         for n in range(nave):
             real_p, imag_p, freq=self.measure()
-            S11=(S11*(n+1)+real_p+1j*imag_p)/(n+2)
+            S11=(S11*(n+1)+real_p+1j*imag_p)/(n+2) #averaging with each iteration
             self.ax.clear()
             self.ax1.clear()
             self.ax.set_xlabel('$f$ [Hz]')
@@ -209,11 +210,12 @@ class StartPage(tk.Frame):
             self.ax1.set_ylabel('S11 reactance [$\Omega$]')
             self.ax.plot(freq, S11.real)
             self.ax1.plot(freq, S11.imag)
-            self.canvas.draw_idle()
+            self.canvas.draw_idle() #draw_idle is a gentle way to draw, it doesn't interupt the GUI
             self.canvas.flush_events()
             
         return S11
 
+#page to set the initial values
 class Init(tk.Frame):
 
     def __init__(self, parent, controller):
@@ -280,7 +282,8 @@ class Flux(tk.Frame):
         self.btnper=tk.Button(self, text="Reset magnet", command=self.zerofield).grid(row=2, column=4, padx=5)
         self.btn1per= tk.Button(self, text="Set", command=self.writevolt).grid(row=2, column=3, padx=5)
     
-        
+    
+    #set the magnetic field. FH are values read from a calibration file, which can be updated 
     def writevolt(self):
         val = self.entrypar.get()
         val = float(val)*FH[0]+FH[1]
@@ -291,10 +294,12 @@ class Flux(tk.Frame):
             val = datazero
             print('Input value not available')
 
+#command to control the magnet, the variables in the function indicate what device on the bnc board we are controlling
         retvalw = comedi.comedi_data_write(dev, subdevw, chanw, rngw, aref, val)
         comedi.comedi_close(dev)
         print(f"Value set to: {val}")
 
+    #reset the magnet
     def zerofield(self):
         dev = comedi.comedi_open("/dev/comedi0")     
         retval = comedi.comedi_data_write(dev, subdevw, chanw, rngw, aref, datazero)
@@ -303,7 +308,8 @@ class Flux(tk.Frame):
         self.entrypar.delete(0, tk.END)
         self.entrypar.insert(0,"0")
 
-        
+
+#Viewer to analyze data
 class Viewer(tk.Frame):
 
     def __init__(self, parent, controller):
@@ -341,6 +347,7 @@ class Viewer(tk.Frame):
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
         self.toolbar.grid(row=13, column=0, columnspan=50, sticky='nwe')
 
+        #creates a list of .dat files to plot
     def file_open(self):
 
         t=tk.filedialog.askopenfilenames()
@@ -350,9 +357,7 @@ class Viewer(tk.Frame):
         for i in range(len(self.filelist)):
             self.listboxopen.insert(i, self.filelist[i].split('/')[-1])
 
-        #self.texti=pd.read_csv(t,index_col=False, comment="#", sep='\t', engine='python')
-        #self.fylki=self.texti.to_numpy(dtype=np.complex)
-    
+        #remove .dat files from the list to plot
     def listbox_delete(self):
         END = self.listboxopen.size()
         self.removelist = self.listboxopen.curselection()
@@ -361,7 +366,7 @@ class Viewer(tk.Frame):
         for i in range(len(self.filelist)):
             self.listboxopen.insert(i, self.filelist[i].split('/')[-1])
 
-
+        #plot the all the .dat files but only the selected item in the self.listbox, which corresponds the the S11 measurement
     def plot(self):
         selected=self.listbox.curselection()[0]
         selection=self.listboxopen.curselection()
@@ -369,7 +374,6 @@ class Viewer(tk.Frame):
             plotlist = [item for n, item in self.filelist if n in selection]
         else:
             plotlist = self.filelist
-            #print(plotlist)
 
         self.ax.clear()
         self.ax1.clear()
@@ -404,6 +408,8 @@ nfpoints = 401
 nave = 10
 savelist=[]
 
+#use try here so the GUI can be used outside the experimental setup
+#this sets up the connection to the network analyzer and the magnet
 try:
     rm = pyvisa.ResourceManager('@py')
     inst = rm.open_resource('GPIB0::6::INSTR')
