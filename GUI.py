@@ -1,5 +1,5 @@
 #!/usr/bin/env
-import comedi
+#import comedi
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,7 +7,7 @@ import tkinter as tk
 from tkinter.constants import *
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-import pyvisa
+#import pyvisa
 import pandas as pd
 
 #App class makes the frames and allows easy switching between them
@@ -21,6 +21,11 @@ class App(tk.Tk):
 
         container.grid_rowconfigure(0, weight = 1)
         container.grid_columnconfigure(0, weight = 1)
+
+        x, y = self.winfo_screenwidth(), self.winfo_screenheight()
+        self.geometry("%dx%d+%d+%d" % (800,450,x/2-800/2,y/2-450/2))
+
+
 
         self.frames = {}
         #for-loop to place each page in the container or parent page
@@ -391,6 +396,23 @@ class Viewer(tk.Frame):
             print(item)
 
         self.canvas.draw()
+
+    def chi(self):
+        infstruct=[] #takes multiple measurements of the same material, but with differing thickness
+        f=[] #is the frequency, assumed to be the same in each scan
+        S=[] # is the S11 reflection parameter
+
+        chi=[] #array that contains the complex susceptibility matrix(no normalization)
+        cz=[] #complex uncorrected Z(impedance)
+
+        nfiles=[] #number of files that contain scans that are read
+        Z=50*(1+S)/(1-S)
+        for n in np.arange(len(nfiles)):
+            cz.append(Z[:,n+1]-Z[:,1])
+
+        #parameters to calc chi, susceptibility of film
+        wid=[] #width of fixture in m
+        A=[] # 
 
 
 def popup_bonus(self):
