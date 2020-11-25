@@ -1,13 +1,14 @@
 #!/usr/bin/env
-#import comedi
+import comedi
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 import tkinter as tk
+from tkinter import ttk
 from tkinter.constants import *
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-#import pyvisa
+import pyvisa
 import pandas as pd
 
 #App class makes the frames and allows easy switching between them
@@ -22,8 +23,8 @@ class App(tk.Tk):
         container.grid_rowconfigure(0, weight = 1)
         container.grid_columnconfigure(0, weight = 1)
 
-        x, y = self.winfo_screenwidth(), self.winfo_screenheight()
-        self.geometry("%dx%d+%d+%d" % (800,450,x/2-800/2,y/2-450/2))
+        #x, y = self.winfo_screenwidth(), self.winfo_screenheight()
+        #self.geometry("%dx%d+%d+%d" % (800,450,x/2-800/2,y/2-450/2))
 
 
 
@@ -52,7 +53,7 @@ class StartPage(tk.Frame):
         self.btnfield=tk.Button(self, text="Set magnetic flux", command=lambda: controller.show_frame(Flux)).grid(row=0,column=1, pady=10)
         self.btnfield=tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer)).grid(row=0,column=2, pady=10, sticky='w')
         self.btncalcorr=tk.Button(self, text="Calc. correction & apply", command=self.docal).grid(row=2,column=0, pady=5, sticky='e')
-    
+
         self.btncalibrate=tk.Button(self, text="Measure", command=self.takecal).grid(row=1, column=0, pady=5, sticky='e')
         self.listbox=tk.Listbox(self, height=2, width=15)
         self.listbox.grid(row=1,column=1,padx=5)
@@ -85,7 +86,7 @@ class StartPage(tk.Frame):
         
         self.Edf = S11l
         self.Erf = 2 * (S11o - S11l) * (S11l - S11s)/(S11o - S11s)
-        self.Esf = (S11o - S11s - 2 * S11l)/(S11o - S11s)
+        self.Esf = (S11o + S11s - 2 * S11l)/(S11o - S11s)
         self.Z0 = 50
         self.S11a = (S11m - self.Edf)/((S11m - self.Edf) * self.Esf + self.Erf)
         self.Za = self.Z0 * (1 + self.S11a)/(1 - self.S11a)
@@ -217,7 +218,7 @@ class StartPage(tk.Frame):
             self.ax1.plot(freq, S11.imag)
             self.canvas.draw_idle() #draw_idle is a gentle way to draw, it doesn't interupt the GUI
             self.canvas.flush_events()
-            
+        print('Measurement complete')   
         return S11
 
 #page to set the initial values
@@ -274,8 +275,8 @@ class Flux(tk.Frame):
         self.entrypar.grid(row=1, column=1)
         self.labelunitpar = tk.Label(self, text="G").grid(row=1, column=2)
 
-        self.btn=tk.Button(self, text="Reset magnet", command=self.zerofield).grid(row=1, column=4, padx=5)
-        self.btn1= tk.Button(self, text="Set", command=self.writevolt).grid(row=1, column=3, padx=5)
+        self.btn=tk.Button(self, text="Reset magnet", command=self.zerofieldpar).grid(row=1, column=4, padx=5)
+        self.btn1= tk.Button(self, text="Set", command=self.writevoltpar).grid(row=1, column=3, padx=5)
         self.btnreturn=tk.Button(self, text="return", command=lambda : controller.show_frame(StartPage)).grid(row=0, column=4)
 
         self.labelper=tk.Label(self, text="Field perpendicular").grid(row=2,column=0, padx=5, sticky="e")
@@ -284,12 +285,12 @@ class Flux(tk.Frame):
         self.entryper.grid(row=2, column=1)
         self.labelunitper = tk.Label(self, text="G").grid(row=2, column=2)
 
-        self.btnper=tk.Button(self, text="Reset magnet", command=self.zerofield).grid(row=2, column=4, padx=5)
-        self.btn1per= tk.Button(self, text="Set", command=self.writevolt).grid(row=2, column=3, padx=5)
+        self.btnper=tk.Button(self, text="Reset magnet", command=self.zerofieldper).grid(row=2, column=4, padx=5)
+        self.btn1per= tk.Button(self, text="Set", command=self.writevoltper).grid(row=2, column=3, padx=5)
     
     
     #set the magnetic field. FH are values read from a calibration file, which can be updated 
-    def writevolt(self):
+    def writevoltpar(self):
         val = self.entrypar.get()
         val = float(val)*FH[0]+FH[1]
         val = int(np.around(val))
@@ -299,19 +300,43 @@ class Flux(tk.Frame):
             val = datazero
             print('Input value not available')
 
-#command to control the magnet, the variables in the function indicate what device on the bnc board we are controlling
+        #command to control the magnet, the variables in the function indicate what device on the bnc board we are controlling
         retvalw = comedi.comedi_data_write(dev, subdevw, chanw, rngw, aref, val)
         comedi.comedi_close(dev)
         print(f"Value set to: {val}")
 
+    def writevoltper(self):
+        val = self.entryper.get()
+        val = float(val)*FH[0]+FH[1]
+        val = int(np.around(val))
+        dev = comedi.comedi_open("/dev/comedi0")
+
+        if val < 0 and val > 4095:
+            val = datazero
+            print('Input value not available')
+
+        #command to control the magnet, the variables in the function indicate what device on the bnc board we are controlling
+        retvalw = comedi.comedi_data_write(dev, subdevw, chanw1, rngw, aref, val)
+        comedi.comedi_close(dev)
+        print(f"Value set to: {val}")
+
     #reset the magnet
-    def zerofield(self):
+    def zerofieldper(self):
+        dev = comedi.comedi_open("/dev/comedi0")     
+        retval = comedi.comedi_data_write(dev, subdevw, chanw1, rngw, aref, datazero)
+        print(f'Resetting DAQs to zero: {retval}')
+        comedi.comedi_close(dev)
+        self.entryper.delete(0, tk.END)
+        self.entryper.insert(0,"0")
+
+    def zerofieldpar(self):
         dev = comedi.comedi_open("/dev/comedi0")     
         retval = comedi.comedi_data_write(dev, subdevw, chanw, rngw, aref, datazero)
         print(f'Resetting DAQs to zero: {retval}')
         comedi.comedi_close(dev)
         self.entrypar.delete(0, tk.END)
         self.entrypar.insert(0,"0")
+
 
 
 #Viewer to analyze data
@@ -372,6 +397,42 @@ class Viewer(tk.Frame):
             self.listboxopen.insert(i, self.filelist[i].split('/')[-1])
 
         #plot the all the .dat files but only the selected item in the self.listbox, which corresponds the the S11 measurement
+    
+    def reArrangeListbox(self):
+        items=list(self.listboxopen.curselection())
+        if not items:
+            print("Nothing")
+            return
+        if self.direction == "up":
+            for pos in items:
+                if pos == 0:
+                    continue
+                text=self.listboxopen.get(pos)
+                fileName = self.filelist[pos]
+                self.filelist.pop(pos)
+                self.listbox.delete(pos)
+                self.filelist.insert(pos-1, fileName)
+                self.listbox.insert(pos-1, text)
+            self.listboxopen.selection_clear(0,self.listboxopen.size())
+            self.listboxopen.selection_set(tuple([i-1 for i in items]))
+
+        if self.direction == "dn":
+            for pos in items:
+                if pos ==self.listboxopen.size():
+                    continue
+                text=self.listboxopen.get(pos)
+                fileName = self.filelist[pos]
+                self.listbox.delete(pos)
+                self.filelist.pop(pos)
+                self.filelist.insert(pos+1, fileName)
+                self.listbox.insert(pos+1, text)
+            self.listboxopen.selection_clear(0,self.listboxopen.size())
+            self.listboxopen.selection_set(tuple([i+1 for i in items]))
+        else:
+            return
+
+
+
     def plot(self):
         selected=self.listbox.curselection()[0]
         selection=self.listboxopen.curselection()
@@ -448,7 +509,7 @@ except:
 #### Comedi setup, configuration for read and write
 try:
     subdevr, chanr, rngr, aref = 0, 0, 1, comedi.AREF_GROUND
-    subdevw, chanw, rngw, = 1, 0, 0
+    subdevw, chanw, chanw1, rngw, = 1, 0, 1, 0
     datazero, datawmax = 2048, 4095
     devname="/dev/comedi0"
     dev = comedi.comedi_open(devname)
