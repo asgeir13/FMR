@@ -1,0 +1,1 @@
+These measurements were done with the old wires, since the measurements were made the wires have been changed to coaxial cables and the resistance 10kOhm soldered on.01.10.2020
