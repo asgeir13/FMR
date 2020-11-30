@@ -1,0 +1,66 @@
+load litur
+
+hvec = (90:-10:0)';
+
+figure(1),clf,hold on,box on
+for n = 1:length(hvec)
+  hind = find(field==hvec(n));
+  hp(n) = plot(thick(hind)*1e10,talpha(hind)*1e10,'.-');
+  set(hp(n),'color',C(n,:))
+end
+legend(strcat(num2str(hvec),' Oe'))
+xylab('t (A)','t\times\alpha (A)','Sample B261-4; Cu/Py/Cu');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+figure(2),clf,hold on,box on
+for n = 1:length(hvec)
+  hind = find(field==hvec(n));
+  hp(n) = plot(thick(hind)*1e10,alpha(hind),'.-');
+  set(hp(n),'color',C(n,:))
+end
+set(gca,'ylim',[0 0.1])
+legend(strcat(num2str(hvec),' Oe'))
+xylab('t (A)','\alpha','Sample B261-4; Cu/Py/Cu');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+figure(3),clf,hold on,box on
+alphanormind = find((field==90) & (thick==1047e-10));
+for n = 1:length(hvec)
+  hind = find(field==hvec(n));
+  hp(n) = plot(thick(hind)*1e10,alpha(hind)/alpha(alphanormind),'.-');
+  set(hp(n),'color',C(n,:))
+end
+set(gca,'ylim',[0 10])
+legend(strcat(num2str(hvec),' Oe'))
+xylab('t (A)','\alpha/\alpha_{H=90 Oe;t=1047 A}','Sample B261-4; Cu/Py/Cu');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

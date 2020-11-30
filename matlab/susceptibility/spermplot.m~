@@ -1,0 +1,64 @@
+function [chi,cz] = spermplot(Infstruct,f,S)
+%function [chi,cz] = spermplot(Infstruct,f,S)
+%input values:
+%   Infstruct: structure containing filenames, savedate, etc.
+%   f: frequency vector (assumed all scans loaded are same frequency)
+%   S: S11 reflection parameter
+%return values:
+%   chi:  complex susceptibility matrix
+%   cz:   complex corrected Z (impedance), i.e. background subtracted
+global C
+nfiles = length(Infstruct);
+z = 50*(1 + S)./(1 - S);
+nbasefiles = 2;
+zbase = (z(:,1) + z(:,2))/2;
+%zbase = z(:,1);
+for n=(nbasefiles + 1):nfiles
+   cz(:,n-nbasefiles) = z(:,n) - zbase;
+end
+
+C2=[C;C;C;C;C];
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%A few parameters to calculate Chi (susceptibility of film)
+%Sample holder dimensions in SI
+wid=3.1115e-3;      %width of holder
+len=3.683e-3;       %length of holder (one way)
+hei=1.016e-3;       %height of holder
+A=pi*(2e-3)^2/4;  %Approximate area of film dot in m^2
+%A=3e-3*3e-3;
+t=1047e-10;   %thickness of magnetic film in m
+%k=.9        %Geometrical factor, from patent of van Dover
+%psi=.85     %Geometrical factor, from patent of van Dover
+kpsi=.1;     %Geometrical factor
+mju0=4*pi*1e-7;   %"permeability of free space" in SI-system
+
+gamma=8*mju0*kpsi*A*t*len*hei/(wid^4);   %This version documented in labnotebook on 990604
+%%%Calculate and plot susceptibility according to measurement
+%write chi=chi'+i*chi'' in matlab=> chi=chip+chipp
+for n=1:(nfiles-nbasefiles)
+   chip(:,n) = (imag(cz(:,n)))./(gamma.*2.*pi.*f);
+   chipp(:,n) = (real(cz(:,n)))./(gamma.*2.*pi.*f);
+end
+chi=(chip+i*chipp)/(4*pi);     %The 4*pi is to convert into cgs units (gaussian)
+%
+%%%%%%%%plotting
+figure,clf;
+hold on;
+xlabel('f (Hz)','fontsize',18,'fontweight','bold');
+ylabel('\chi^{\prime}','fontsize',18,'fontweight','bold');
+hpchi = plot(f,real(chi));
+set(gca,'xscale','log','box','on');
+datestamp('tl',2);
+%
+figure,clf;
+hpchi = plot(f,imag(chi));
+set(gca,'xscale','log','box','on');
+xlabel('f (Hz)','fontsize',18,'fontweight','bold');
+ylabel('\chi^{\prime\prime}','fontsize',18,'fontweight','bold');
+datestamp('tl',2);
+%
+%figure,clf;
+%hpchi = plot(f,unwrap(angle(chi)));
+%datestamp('tl',2);
+shg
+

@@ -1,0 +1,11 @@
+function [harr,tarr,sarr,farr,infarr] = appendb45002eaz(harr,tarr,sarr,farr,infarr,t,tmps,tmpf,tmpinf);
+  
+  harr = [harr; (400:-20:0)'];
+  tarr = [tarr; ones(21,1)*t];
+  sarr = [sarr; tmps.'];         %non-complex conjugate transpose (transpose, not adjoint)
+  farr = [farr; ones(21,1)*tmpf'];
+  infarr = [infarr; tmpinf];
+  
+  
+  
+  

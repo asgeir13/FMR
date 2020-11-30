@@ -1,0 +1,56 @@
+% Only two terraces I successfully got signal from in the B424-1 terrace sample.
+% Thickness is according to the calibration by LR, i.e. not measured magnetically.
+
+field = [];,thick = [];, spar = [];,freq = []; infdata = [];
+t=1e-10*[
+500
+137
+];	    
+
+
+cd /home/sthi/usr/exp/suscept/manual_field_fmr/b424_1/b424_1_2/b
+[tmpinf,tmpf,tmps] = sload(20,'c');
+tmpf=(linspace(tmpf(1),tmpf(1601),1601))';
+[field,thick,spar,freq,infdata] = appendarbitrarylength(field,thick,spar,freq,infdata,t(1),tmps,tmpf,tmpinf);
+
+cd /home/sthi/usr/exp/suscept/manual_field_fmr/b424_1/b424_1_4/
+[tmpinf,tmpf,tmps] = sload(17,'c');
+tmpf=(linspace(tmpf(1),tmpf(1601),1601))';
+[field,thick,spar,freq,infdata] = appendarbitrarylength(field,thick,spar,freq,infdata,t(2),tmps,tmpf,tmpinf);
+  
+
+cd /home/sthi/usr/exp/suscept/manual_field_fmr/b424_1/b424_1_7
+[tmpinf,tmpf,tmps] = sload(11,'c');
+tmpf=(linspace(tmpf(1),tmpf(1601),1601))';
+[field,thick,spar,freq,infdata] = appendarbitrarylength(field,thick,spar,freq,infdata,t(2),tmps,tmpf,tmpinf);
+
+cd /home/sthi/usr/exp/suscept/manual_field_fmr/b424_1
+
+stochib42401_manualfieldfmr
+
+% for n=1:length(field)
+%   plot(freq(n,:),real(chi(n,:)))
+%   shg
+%   pause
+% end
+
+display('Now you should input the true field values in the field vector')
+
+field(calibs)=[];,thick(calibs)=[];freq(calibs,:)=[];,chi(calibs,:)=[];
+currfield=[     %current in mA through GAK's coil
+0
+[100:50:450]'
+[450:50:800]'
+800
+0
+[100:50:350]'
+450
+450
+400
+[500:50:700]'
+0
+[100:100:800]'
+];
+
+% Calibration of GAK's coil
+field = 0.41705*currfield + 0.50294;

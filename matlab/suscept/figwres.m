@@ -1,0 +1,79 @@
+% Use this file to load the different workspaces and then use the 
+% 'cplot' command to plot the data (help cplot)
+
+
+fname = 'manwres'
+imill
+load(fname)
+% clear fname
+prependws('imill');
+
+fname = 'manwres'
+b261
+load(fname)
+% clear fname
+prependws('b261','imill');
+
+fname = 'manwres'
+b279
+load(fname)
+% clear fname
+prependws('b279','b261','imill');
+
+fname = 'manwres'
+b300
+load(fname)
+% clear fname
+prependws('b300','b279','b261','imill');
+
+% % imillalpha(121:130)=[];imillalpha(91:110)=[];   %applies when apr00nleaz
+% % imillthick(121:130)=[];imillthick(91:110)=[];
+% % imillfield(121:130)=[];imillfield(91:110)=[];
+% imillalpha(12:13)=[];imillalpha(10)=[];
+% imillthick(12:13)=[];imillthick(10)=[];
+% imillfield(12:13)=[];imillfield(10)=[];
+% 
+% % b261alpha(1:10)=[];  %applies when apr00nleaz
+% % b261thick(1:10)=[];
+% % b261field(1:10)=[];
+% b261alpha(1)=[];
+% b261thick(1)=[];
+% b261field(1)=[];
+% 
+% % b279alpha(1:30)=[];  %applies when apr00nleaz
+% % b279thick(1:30)=[];
+% % b279field(1:30)=[];
+% b279alpha(4)=[];,b279alpha(1)=[];
+% b279thick(4)=[];,b279thick(1)=[];
+% b279field(4)=[];,b279field(1)=[];
+% 
+% 
+
+
+
+% for use with cplot and legend
+fname = {'Ion mill';'B261 (Cu/Py/Cu)';'B279 (Pt/Py/Pt)';'B300 (SiO_2/Py/PR)'}
+
+hp = cplot({'imill' 'b261' 'b279' 'b300'},'thick.^(-1)*1e-10','manwres.^2')
+mydefaults
+mymarker={'o';'o';'squ';'>';'^';'^'};
+set(hp,{'marker'},mymarker(1:length(hp)))
+for n=1:length(hp)
+  set(hp(n),'color',mycolor(n,:))
+  set(hp(n),'markerfacecolor',mycolor(n,:))
+end
+% set([hp(1);hp(5)],'markerfacecolor','none')
+set([hp(1)],'markerfacecolor','none')
+axis square
+legend(fname)
+xylab(['(Thickness)^{-1}, 1/d (' angst '^{-1})'],'\omega_r^2 ((rad/s)^2)','')
+
+shg
+
+
+pause
+legend off
+set(hp,'color','k','markerfacecolor','k')
+% set([hp(1);hp(5)],'markerfacecolor','none')
+set([hp(1)],'markerfacecolor','none')
+shg

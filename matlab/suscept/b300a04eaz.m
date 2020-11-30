@@ -1,0 +1,78 @@
+% Thicknesses correspond to following measurements
+% C2L3T2d2  %This one had no signal;  skip it
+% C3L3T2d2      
+% C5L3T3d2      
+% C8L3T4d2       
+% C10L3T5d2     
+% C12L3T6d2     
+% C15L3T7d2     
+% C17L3T8d2     
+
+
+field = [];,thick = [];, spar = [];,freq = []; infdata = [];
+t=1e-10*[
+% from SQUID, measured all with SQUID at same time as doing resistivity measurements
+35
+44
+59
+88
+157
+351
+594
+% from AGM, rescaled with SQUID result for C15 sample
+% 33
+% 41
+% 80
+% 94
+% 166
+% 332
+% 580
+% from AGM-results
+% 38
+% 49
+% 94
+% 111
+% 196
+% 390
+% 682
+% nominal
+% 63
+% 77
+% 100
+% 141
+% 240
+% 500
+% 800
+];	    
+
+
+ cd C:\usr\exp\suscept\PyBrown\b300a-4terrace\C3L3T2d2\eaz  
+ [tmpinf,tmpf,tmps] = sload(12,'c');
+ [field,thick,spar,freq,infdata] = append(field,thick,spar,freq,infdata,t(1),tmps,tmpf,tmpinf);
+ 
+ cd C:\usr\exp\suscept\PyBrown\b300a-4terrace\C5L3T3d2\eaz  
+ [tmpinf,tmpf,tmps] = sload(12,'c');
+ [field,thick,spar,freq,infdata] = append(field,thick,spar,freq,infdata,t(2),tmps,tmpf,tmpinf);
+ 
+ cd C:\usr\exp\suscept\PyBrown\b300a-4terrace\C8L3T4d2\eaz  
+ [tmpinf,tmpf,tmps] = sload(12,'c');
+ [field,thick,spar,freq,infdata] = append(field,thick,spar,freq,infdata,t(3),tmps,tmpf,tmpinf);
+ 
+ cd C:\usr\exp\suscept\PyBrown\b300a-4terrace\C10L3T5d2\eaz  
+ [tmpinf,tmpf,tmps] = sload(12,'c');
+ [field,thick,spar,freq,infdata] = append(field,thick,spar,freq,infdata,t(4),tmps,tmpf,tmpinf);
+ 
+ cd C:\usr\exp\suscept\PyBrown\b300a-4terrace\C12L3T6d2\eaz  
+ [tmpinf,tmpf,tmps] = sload(12,'c');
+ [field,thick,spar,freq,infdata] = append(field,thick,spar,freq,infdata,t(5),tmps,tmpf,tmpinf);
+ 
+ cd C:\usr\exp\suscept\PyBrown\b300a-4terrace\C15L3T7d2\eaz  
+ [tmpinf,tmpf,tmps] = sload(12,'c');
+ [field,thick,spar,freq,infdata] = append(field,thick,spar,freq,infdata,t(6),tmps,tmpf,tmpinf);
+ 
+ cd C:\usr\exp\suscept\PyBrown\b300a-4terrace\C17L3T8d2\eaz  
+ [tmpinf,tmpf,tmps] = sload(12,'c');
+ [field,thick,spar,freq,infdata] = append(field,thick,spar,freq,infdata,t(7),tmps,tmpf,tmpinf);
+ 
+  
+ cd c:\usr\exp\suscept\PyBrown\b300a-4terrace

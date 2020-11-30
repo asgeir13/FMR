@@ -1,0 +1,25 @@
+function lw = getlinew(vlength)
+% function lw = getlinew(vlength)
+% 
+% This function is written to get the linewidth of susceptibility data manually  
+% by picking it of the graphs.
+% 
+% input: vlength  no. of susceptibility traces
+% 
+% output: lw   linewidth
+% 
+% sthi 10/10/2000
+
+for n = 1:vlength
+  nn = num2str(n);
+  plstr = ['plot(freq(' nn ',:),real(chi(' nn ',:)),''r'',freq(' nn ',:),imag(chi(' nn ',:)),''b'')']
+  evalin('base',plstr)
+  pt = ginput(2);
+  lw(n,:) = abs(pt(1,1) - pt(2,1))
+end
+
+
+
+
+
+

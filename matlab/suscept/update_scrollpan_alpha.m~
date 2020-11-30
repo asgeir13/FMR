@@ -1,0 +1,35 @@
+function update_scrollpan_alpha(lambda,kshape)
+%  function update_scrollpan_alpha(lambda,kshape)
+%    
+%    This function updates the values in the scroll panel according to the input variables
+%    lambda 
+%    kshape.
+%    
+%    It updates both the value box and the scrollbar.
+%    
+%    Last modified:  4/21/00 sthi
+%
+  for nn=1:3
+    kk = int2str(nn);
+    valstr = strcat('val',kk);
+    slidstr = strcat('Slider',kk);
+    mastr = strcat('max',kk);
+    mistr = strcat('min',kk);
+    resstr = strcat('res',kk);
+
+    ma = str2num(char(get(findobj('tag',mastr),'string')))
+    mi = str2num(char(get(findobj('tag',mistr),'string')))
+    
+    set(findobj('tag',valstr),'string',sprintf('%.3g',lambda(nn)));
+    val = (lambda(nn) - mi)/(ma - mi);
+    set(findobj('tag',slidstr),'value',val);
+  end
+  set(findobj('tag','val4'),'string',sprintf('%.3g',kshape));
+
+  ma = str2num(char(get(findobj('tag','max4'),'string')));
+  mi = str2num(char(get(findobj('tag','min4'),'string')));                                                                                                                                                                                                  
+  val = (kshape - mi)/(ma - mi);
+  set(findobj('tag','Slider4'),'value',val);
+ 
+  
+ 

@@ -1,0 +1,53 @@
+fname = 'apr00nleaz'
+imill
+load(fname)
+clear fname
+prependws('imill');
+
+fname = 'apr00nleaz'
+b261
+load(fname)
+clear fname
+prependws('b261','imill');
+
+fname = 'apr00nleaz'
+b279
+load(fname)
+clear fname
+prependws('b279','b261','imill');
+
+% fname = 'eazwithks27h90'
+% b300
+% load(fname)
+% clear fname
+% prependws('b300','b279','b261','imill');
+
+imillalpha(121:130)=[];imillalpha(91:110)=[];   %applies when apr00nleaz
+imillthick(121:130)=[];imillthick(91:110)=[];
+imillfield(121:130)=[];imillfield(91:110)=[];
+
+b261alpha(1:10)=[];  %applies when apr00nleaz
+b261thick(1:10)=[];
+b261field(1:10)=[];
+
+b279alpha(1:30)=[];  %applies when apr00nleaz
+b279thick(1:30)=[];
+b279field(1:30)=[];
+
+
+
+% %%%%%%%%%%
+% tentative additions
+% fname = 'firstfit'
+% b311
+% load(fname)
+% clear fname
+% prependws('b311','b300','b279','b261','imill');
+% 
+% fname = 'firstfit'
+% b343
+% load(fname)
+% clear fname
+% prependws('b343','b311','b300','b279','b261','imill');
+
+

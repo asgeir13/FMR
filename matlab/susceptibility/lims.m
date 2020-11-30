@@ -1,0 +1,7 @@
+set(gca,'xlim',[1e8 4e9])
+%set(gca,'ylim',[0 4])
+%set(gca,'ylim',[-inf inf])
+set(gca,'ylim',[-4e2 4e2])
+%set(gca,'xscale','log')
+set(gca,'xscale','lin')
+%set(gca,'xgrid','on','ygrid','on')

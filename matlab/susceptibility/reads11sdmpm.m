@@ -1,0 +1,69 @@
+function [info,f,S]=reads11sdmpm(namebase,numfile)
+%function [info,f,s]=reads11sdmpm(namebase,numfile)
+%
+%Read reflection measurement from DMPM (Roger Koch's program).
+%The reflection coefficient read is the short calibration S11S, real and imag.  
+%
+%variables: namebase  string containing namebase
+%           numfile   number to append to namebase to obtain filename.dat
+%
+%returns:   info  text variables read from file, date, time, vector 
+%                 length etc. stored in a cell array containing strings
+%           f     a vector containing the frequency values for the run
+%           s     a matrix containing complex S11: [S11SR + i*S11SI].
+%
+%Snorri Ingvarsson, 11/29/01
+
+[s,skilabod]=fopen(strcat(namebase,num2str(numfile),'.dat'),'r','l');
+
+filename='';
+while isempty(findstr(filename,'FILE_NAME'))
+   filename=fgetl(s);
+end
+savedate=fgetl(s);                %next line is savedate
+savetime=fgetl(s);                %next line is savetime
+lina='';
+while isempty(findstr(lina,'vector names and lengths follow'))
+   lina=fgetl(s);
+end
+nvect=str2num(lina(1:(findstr(lina,'vector names and lengths follow')-1)));
+for i=1:3,
+   fgetl(s);                      %read out the 3 lines that come before 
+   %                               the real information on vectors.
+end
+%find how many bytes into the data my vectors are.  I'm searching for freq,
+%s11sr and s11si (frequency, the averaged real and imaginary S11S parameter.
+%
+relloc=0;                         %"current" relative location of w.r.t. 
+%                                  starting byte count.
+for i=1:(nvect - 3),
+   lina=fgetl(s);
+   len=str2num(lina(find(isspace(lina)):length(lina)));
+   if ~isempty(findstr(lina,'FREQ[')), lvec=len;, freqloc=relloc;, end
+   if ~isempty(findstr(lina,'S11SR[')), srealloc=relloc;,end
+   if ~isempty(findstr(lina,'S11SI[')), simagloc=relloc;,end
+   relloc=relloc + len;
+end
+
+fgetl(s);
+lina=fgetl(s);
+Z=zeros(lvec,3);
+%find the starting byte count.
+stbtct=str2num(lina(1:(findstr(lina,'is the starting byte count')-1)));
+
+status=fseek(s,stbtct + 4*freqloc,'bof');   %read frequency.
+f=fread(s,lvec,'float32');
+
+
+S=zeros(lvec,1);
+status=fseek(s,stbtct + 4*srealloc,'bof');  %read Re(S11).
+res=fread(s,lvec,'float32');
+
+status=fseek(s,stbtct + 4*simagloc,'bof');  %read Im(S11) and add to real part.
+ims=fread(s,lvec,'float32');
+i=sqrt(-1);
+S=res + i*ims;
+
+fclose(s);
+
+info = {filename; savedate; savetime};

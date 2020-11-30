@@ -1,0 +1,137 @@
+% points removed from raw data:
+% first 10 of Cu; B261-4
+% first 30 of Py; B279-2
+% from 121:130 and 91:110 of imill
+angst = char(hex2dec('c5'));
+
+%%   % 1/d vs. alpha 1/d^2 vs alpha at fixed h
+% % n = 0;
+% fit = [];
+% for h = 90:-10:0
+% %   display(['Field = ' num2str(h,'%.0f')])
+%   mind = find(imillfield == h);
+%   pind = find(b279field == h);
+%   cind = find(b261field == h);
+% %   
+%   figure
+% % %  orient landscape
+% %   subplot(1,2,mod(n,2)+1)
+%   plot(1e-10./imillthick(mind),imillalpha(mind),'.-', ...
+%        1e-10./b261thick(cind),b261alpha(cind),'.-', ...
+%        1e-10./b279thick(pind),b279alpha(pind),'.-')
+%   xylab(['1/d (' angst ')^{-1}'],'\alpha',['H = ' num2str(h,'%.0f') '(Oe)'])
+% % legend('ion-milled','Cu','Pt')
+%   
+%   %******   fitting
+%   t = b279thick(pind)*1e8;
+%   A = [ones(length(pind),1) 1./t 1./(t.^2)];
+%   B = A\b279alpha(pind);
+%   fit = [fit; B'];
+%   hp = line(1e-2./t,B(1) + B(2)./t + B(3)./(t.^2))
+%   set(hp,'marker','*','color','c')
+%   legend('ion-milled','Cu','Pt','fit to Pt')  
+% %   clear t A B hp
+%   %******   fitting
+% % print -dwinc  
+% %   n=n+1;
+% % 
+% %   subplot(1,2,mod(n,2)+1)     
+% %   plot(1e-10./(imillthick(mind).^2),imillalpha(mind),'.-', ...
+% %        1e-10./(b261thick(cind).^2),b261alpha(cind),'.-', ...
+% %        1e-10./(b279thick(pind).^2),b279alpha(pind),'.-')
+% %   xylab(['1/d^2 (' angst ')^{-2}'],'\alpha',['H = ' num2str(h,'%.0f') '(Oe)'])
+% %   n= n+1;
+% %    
+% % %  set(gca,'ylim',[0 .1])
+% % %  shg
+% % %  print('-djpeg100',['h' num2str(h,'%.0f') '.jpg'])
+% % %  pause
+% end
+
+
+
+%%   % 1/d vs. alpha at fixed h on loglog scale
+% for h = 90:-10:0
+for h = 90
+  display(['Field = ' num2str(h,'%.0f')])
+  mind = find(imillfield == h);
+  pind = find(b279field == h);
+  cind = find(b261field == h);
+  oind = find(b300field == h);
+  
+  figure
+%  orient landscape
+hp = plot(1e-10./imillthick(mind),imillalpha(mind),'.-', ...
+       1e-10./b261thick(cind),b261alpha(cind),'.-', ...
+       1e-10./b279thick(pind),b279alpha(pind),'.-', ...
+       1e-10./b300thick(oind),b300alpha(oind),'.-')
+  xylab(['1/d_{Py} (' angst ')^{-1}'],'\alpha',['H = ' num2str(h,'%.0f') ' Oe along easy axis; Substrate Si/SiO_2'])
+  legend('Ion-milled Py','100Cu/Py/100Cu','80Pt/Py/80Pt','Py/PR',2)
+  set(gca,'xlim',[0 3e-2],'ylim',[0 .04])
+  txt = text(.029,.003,'IBM confidential');
+  set(txt,'fontsize',14,'horizontalalignment','right')
+%  print('-djpeg100',['h' num2str(h,'%.0f') '.jpg'])
+  shg
+%  print -dwinc
+%  pause
+end
+
+
+
+
+%%   % 1/d vs. wres at fixed h
+% for h = 90:-10:0
+%   display(['Field = ' num2str(h,'%.0f')])
+%   mind = find(imillfield == h);
+%   pind = find(b279field == h);
+%   cind = find(b261field == h);
+%   
+%   imillgyro = imillnlc(1,:)';
+%   b279gyro = b279nlc(1,:)';
+%   b261gyro = b261nlc(1,:)';
+%   
+%   figure
+% %  orient landscape
+% %   semilogx(1e-10./imillthick(mind),(imillwres(mind)./imillgyro(mind)).^2,'.-', ...
+% %        1e-10./b261thick(cind),(b261wres(cind)./b261gyro(cind)).^2,'.-')
+% %   xylab(['1/d (' angst ')^{-1}'],'(\omega_{res}/\gamma)^2',['H = ' num2str(h,'%.0f') '(Oe)'])
+%   semilogx(1e2./imillthick(mind),(imillwres(mind)./imillegamma).^2,'.-', ...
+%        1e2./b261thick(cind),(b261wres(cind)./b261egamma).^2,'.-',1e2./b279thick(pind),(b279wres(pind)./b279egamma).^2,'.-')
+%   xylab('1/d (cm)^{-1}','(\omega_{res}/\gamma)^2',['H = ' num2str(h,'%.0f') '(Oe)'])
+%   legend('ion-milled','Cu',3)
+% %% Thin Pt samples give no signal
+% %   semilogx(1e-10./imillthick(mind),imillwres(mind),'.-', ...
+% %        1e-10./b261thick(cind),b261wres(cind),'.-', ...
+% %        1e-10./b279thick(pind),b279wres(pind),'.-')
+% %   xylab(['1/d (' angst ')^{-1}'],'\omega_{res}',['H = ' num2str(h,'%.0f') '(Oe)'])
+% %   legend('ion-milled','Cu','Pt',2)
+% % set(gca,'xlim',[5e-4 1e-1])
+% %  print('-djpeg100',['h' num2str(h,'%.0f') '.jpg'])
+%   shg
+% %  print -dwinc
+% %  pause
+% end
+
+
+
+%%   % d vs. alpha*d at fixed h 
+% for h = 90:-10:0
+%   display(['Field = ' num2str(h,'%.0f')])
+%   mind = find(imillfield == h);
+%   pind = find(b279field == h);
+%   cind = find(b261field == h);
+%   
+%   figure
+% %  orient landscape
+%   plot(1e10.*imillthick(mind),1e10.*imillthick(mind).*imillalpha(mind),'.-', ...
+%        1e10.*b261thick(cind),1e10.*b261thick(cind).*b261alpha(cind),'.-', ...
+%        1e10.*b279thick(pind),1e10.*b279thick(pind).*b279alpha(pind),'.-')
+%   xylab(['d (' angst ')'],['\alpha\times d (' angst ')'],['H = ' num2str(h,'%.0f') '(Oe)'])
+%   legend('ion-milled','Cu','Pt',2)
+%   %   set(gca,'xlim',[5e-4 1e-1])
+% %  print('-djpeg100',['h' num2str(h,'%.0f') '.jpg'])
+%   shg
+% %  print -dwinc
+% %  pause
+% end
+

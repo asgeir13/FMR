@@ -1,0 +1,21 @@
+variables = [];
+for nn=1:4
+  varstr = strcat('var',int2str(n));
+  valstr = strcat('val',int2str(n));
+  minstr = strcat('min',int2str(n));
+  maxstr = strcat('max',int2str(n));
+  resstr = strcat('res',int2str(n));
+  variables(n) = findobj('tag',varstr);
+  values(n) = findobj('tag',valstr);
+  minvals(n) = findobj('tag',minstr);
+  maxvals(n) = findobj('tag',maxstr);
+  resolutions(n) = findobj('tag',resstr);
+end
+
+vr = {'g';'Hk';'a';'kshape'};
+% vl = [1 
+for nn=1:4
+  set(variables(n),'string',char(vr(n)));
+end
+
+

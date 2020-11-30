@@ -1,0 +1,28 @@
+function [hx,hy,ht]=xylab(xstr,ystr,tstr)
+% function [hx,hy,ht] = xylab(xstr,ystr,tstr)
+% takes x-string (xstr) and y-string (ystr) and label the axes of the current
+% figure with them.  Use tstr for title.
+% Returns handle for each label: [hx,hy,ht]
+  
+%  xlabel(xstr,'fontsize',14)
+%  ylabel(ystr,'fontsize',14)
+%  title(tstr,'fontsize',14)
+%  set(gca,'fontsize',14)
+%  
+% Preferrable to control fontsizes by default values, set(0,'defaultaxesfontsize',14) e.g.
+% See e.g. mydefaults.m
+
+  xlabel(xstr)
+  ylabel(ystr)
+  title(tstr)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
