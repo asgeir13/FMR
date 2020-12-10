@@ -13,9 +13,8 @@ import datetime
 
 
 
-
-
-#App class makes the frames and allows easy switching between them
+    #App class makes the frames and allows easy switching between them, frames are the different windows that pop up and cover the GUI,
+    #calibrate, batch and viewer are "independent" frames
 class App(tk.Tk):
     def __init__(self, *args, **kwargs):
 
@@ -41,12 +40,12 @@ class App(tk.Tk):
             frame.grid(row = 0, column = 0, sticky="nsew")
 
         self.show_frame(StartPage)
-    #raises the page to the top with tkraise()
+        #raises the page to the top with tkraise()
     def show_frame(self, cont):
         frame = self.frames[cont]
         frame.tkraise()
 
-
+    #this is the main page
 class StartPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
@@ -94,7 +93,7 @@ class StartPage(tk.Frame):
 
         tk.Button(self, text="Reset", command=lambda: self.zerofield("per")).grid(row=5, column=17)
         tk.Button(self, text="Set", command=lambda: self.writevolt("per"), width=1).grid(row=5, column=16, sticky='e')
-        
+    
     def _quit(self):
         app.quit()
         app.destroy()
@@ -102,6 +101,26 @@ class StartPage(tk.Frame):
     def stop_run(self):
         self.run=False
 
+        #saves all the arrays, filedialog.asksaveasfile creates pop up save window
+    def file_save(self):
+        f = tk.filedialog.asksaveasfile(mode="w", defaultextension="*.txt")
+        intro="#FMR data, this file includes calibration measurements, correction factor and corrected S11\n"
+        intro1="freq\tS11a\tS11m\tS11o\tS11l\tS11s\tZa\tEdf\tErf\tEsf\n"
+        dataout=np.column_stack((self.freq, self.S11a, self.S11m, S11o, S11l, S11s, self.Za, Edf, Erf, Esf))
+        #write the two headers and then writing the array dataout with a double for-loop
+        f.write(intro)
+        f.write(intro1)
+        for i in np.arange(len(dataout)):
+            for n in np.arange(len(dataout[0])):
+                if n==0:
+                    f.write(str(dataout[i][n].real))
+                    f.write("\t")
+                else:
+                    f.write(str(dataout[i][n]))
+                    f.write("\t")
+            f.write("\n")
+        f.close
+ 
         #use open, short, load to calibrate the measurement   
     def docal(self):
         global Edf, Erf, Esf, Z0
@@ -111,14 +130,14 @@ class StartPage(tk.Frame):
         Z0 = 50
         self.S11a = (self.S11m - Edf)/((self.S11m - Edf) * Esf + Erf)
         self.Za = Z0 * (1 + self.S11a)/(1 - self.S11a)
-        
+      
     def takecal(self):
-        self.run=True
+        self.run=True  #enable the stop function, when the stop function is called self.run=False and the for loop stops
         self.S11m = np.zeros(nfpoints, dtype=np.complex128)
         real_p, imag_p, self.freq = self.measure()
-        plt.ion()
+        plt.ion() #enable interactive plotting
         self.S11m=real_p+1j*imag_p
-        self.docal()
+        self.docal() #run docal function to receive Za and S11a
         self.ax.clear()
         self.ax1.clear()
         self.ax.set_xlabel('$f$ [Hz]')
@@ -127,9 +146,10 @@ class StartPage(tk.Frame):
         self.ax1.set_ylabel('$Z_a$ reactance [$\Omega$]')
         self.ax.plot(self.freq, self.Za.real)
         self.ax1.plot(self.freq, self.Za.imag)
-        self.canvas.draw_idle()
+        self.canvas.draw_idle()  #enables gentile plotting, doesn't interupt the GUI's internal loops
         self.canvas.flush_events()
-        for n in range(nave):
+        print(f'1 of {nave+1} scans complete')
+        for n in range(nave):  #averaging
             if self.run==False:
                 break
             
@@ -146,65 +166,45 @@ class StartPage(tk.Frame):
             self.ax1.plot(self.freq, self.Za.imag)
             self.canvas.draw_idle() #draw_idle is a gentle way to draw, it doesn't interupt the GUI
             self.canvas.flush_events()
+
+            print(f'{n+2} of {nave+1} scans complete')
         print('Measurement complete')
 
-
-        #saves all the arrays, only applicable after running the docal function
-    def file_save(self):
-        f = tk.filedialog.asksaveasfile(mode="w", defaultextension="*.txt")
-        intro="#FMR data, this file includes calibration measurements, correction factor and corrected S11\n"
-        intro1="freq\tS11a\tS11m\tS11o\tS11l\tS11s\tZa\tEdf\tErf\tEsf\n"
-        dataout=np.column_stack((self.freq, self.S11a, self.S11m, S11o, S11l, S11s, self.Za, self.Edf, self.Erf, self.Esf))
-        f.write(intro)
-        f.write(intro1)
-        for i in np.arange(len(dataout)):
-            for n in np.arange(len(dataout[0])):
-                if n==0:
-                    f.write(str(dataout[i][n].real))
-                    f.write("\t")
-                else:
-                    f.write(str(dataout[i][n]))
-                    f.write("\t")
-            f.write("\n")
-        f.close
-
-    #receiving measurements from the network analyzer
+        #receiving measurements from the network analyzer
     def measure(self):
-        inst.write("TRS;WFS")
-        inst.write('*OPC?')
+        inst.write("TRS;WFS")   #TRS triggers a scan and WFS is wait for sweep
+        inst.write('*OPC?')     #*OPC? askes if WFS is finished, thus avoiding reading the old buffer
         c=True
-        while c:
+        while c:    #waiting for sweep
             val=0
             try:
                 val=inst.read()
                 c=False
             except:
-                time.sleep(0.01)      
-
+                time.sleep(0.005)      
+        
         inst.write("OFV") #requesting the frequency values
-        fre_val=inst.read("\n")
-        fre_val=fre_val.rsplit(", ")
-        new_fre_val=fre_val[0].rsplit(" ")
-        new_fre_val.extend(fre_val[1:])
-        new_fre_val=[float(n) for n in new_fre_val[1:]]
+        freq=inst.read("\n")
+        freq=freq.rsplit(", ")
+        freq1=freq[0].rsplit(" ")
+        freq1.extend(freq[1:])
+        freq=[float(n) for n in freq1[1:]]
 
         inst.write("OFD") #requesting the S11 measurements, this returns the real and imag part
         valu=inst.read("\n")
         valu=valu.rsplit(",")
-        new_valu=valu[0].rsplit(" ")
-        new_valu.extend(valu[1:])
-        new_valu=[float(n) for n in new_valu[1:]]
-        real_part=imag_part=np.arange(len(new_fre_val),dtype=np.float64)
+        valu1=valu[0].rsplit(" ")
+        valu1.extend(valu[1:])
+        valu=[float(n) for n in valu1[1:]]
+        real=imag=np.arange(len(freq),dtype=np.float64)
 
-        real_part=np.array(new_valu[0:-1:2]) #the complex values are given in pairs
-        imag_part=new_valu[1:-1:2]
-        imag_part.append(new_valu[-1])
-        imag_part=np.array(imag_part)
-        return real_part, imag_part, new_fre_val
+        real=np.array(valu[0:-1:2]) #the complex values are given in pairs
+        imag=valu[1:-1:2]
+        imag.append(valu[-1])
+        imag=np.array(imag)
+        return real, imag, freq
 
-        #this function measures multiple times by calling the measure funtion, it is called nave times
-        #which is the number of averages
-    #set the magnetic field. FH are values read from a calibration file, which can be updated 
+        #set the magnetic field. FH are values read from a calibration file, which can be updated 
     def writevolt(self, direction):
         dev = comedi.comedi_open("/dev/comedi0")
         if direction=="par":
@@ -224,7 +224,7 @@ class StartPage(tk.Frame):
         comedi.comedi_close(dev)
         print(f"Value set to: {val}")
     
-    #reset the magnet
+        #reset the magnet
     def zerofield(self, direction):
         if direction=="per":
             self.entryper.delete(0, END)
@@ -240,7 +240,7 @@ class StartPage(tk.Frame):
         print(f'Resetting DAQs to zero: {retval}')
         comedi.comedi_close(dev)
 
-#page to set the initial values
+    #page to set the initial values
 class Calibrate(tk.Frame):
 
     def __init__(self, parent, controller):
@@ -329,6 +329,7 @@ class Calibrate(tk.Frame):
         tk.Button(self, text="+", command=lambda: self._up(1), width=1, height=1).grid(row=13, column=15)
         tk.Button(self, text="-", command=lambda: self._down(1), width=1, height=1).grid(row=13,column=16)
         tk.Button(self, text="Set values", command=self.set_values).grid(row=8, column=16, columnspan=3)
+        tk.Button(self, text="Calibrate IF", command=self.cal).grid(row=9, column=16, columnspan=3)
     
     def _up(self,dex):
         if dex==1:
@@ -364,7 +365,7 @@ class Calibrate(tk.Frame):
                 self.pointsbox.insert(0, self.pointlist[index-1])
     
 
-       #save each measurement to it's corresponding variable
+        #save each measurement to it's corresponding variable
     def save(self):
         global S11o, S11l, S11s
         number=self.listbox.curselection()[0]
@@ -419,15 +420,15 @@ class Calibrate(tk.Frame):
         stop="STP "+stop+" MHz"
         inst.write(start)
         inst.write(stop)
-       
+        #set IF_BW value
         inst.write("IF"+str(int(self.IF_list.index(self.IF_BW.get())+1)))
-
+        #number of data points set, 
         inst.write("NP"+self.pointsbox.get())
+        nfpoints=int(self.pointsbox.get())
 
         nave=int(self.numberentry.get())-1
-        print(nave)
 
- #set the magnetic field. FH are values read from a calibration file, which can be updated 
+        #set the magnetic field. FH are values read from a calibration file, which can be updated 
     def writevolt(self, direction):
         dev = comedi.comedi_open("/dev/comedi0")
         if direction=="par":
@@ -447,7 +448,7 @@ class Calibrate(tk.Frame):
         comedi.comedi_close(dev)
         print(f"Value set to: {val}")
     
-    #reset the magnet
+        #reset the magnet
     def zerofield(self, direction):
         if direction=="per":
             self.entryper.delete(0, END)
@@ -462,8 +463,11 @@ class Calibrate(tk.Frame):
         retval = comedi.comedi_data_write(dev, subdevw, chan, rngw, aref, datazero)
         print(f'Resetting DAQs to zero: {retval}')
         comedi.comedi_close(dev)
-  
-   #receiving measurements from the network analyzer
+
+    def cal(self):
+       inst.write("HCT") #trigger a IF calibration, automatic calibration is turned off 
+
+        #receiving measurements from the network analyzer
     def measure(self):
         inst.write("TRS;WFS")
         inst.write('*OPC?')
@@ -475,38 +479,26 @@ class Calibrate(tk.Frame):
                 c=False
             except:
                 time.sleep(0.01)
-
         inst.write("OFV") #requesting the frequency values
-        fre_val=inst.read("\n")
-        fre_val=fre_val.rsplit(", ")
-        new_fre_val=fre_val[0].rsplit(" ")
-        new_fre_val.extend(fre_val[1:])
-        new_fre_val=[float(n) for n in new_fre_val[1:]]
+        freq=inst.read("\n")
+        freq=freq.rsplit(", ")
+        freq1=freq[0].rsplit(" ")
+        freq1.extend(freq[1:])
+        freq=[float(n) for n in freq1[1:]]
 
         inst.write("OFD") #requesting the S11 measurements, this returns the real and imag part
         valu=inst.read("\n")
         valu=valu.rsplit(",")
-        new_valu=valu[0].rsplit("-")
-        if len(new_valu)==3:
-            new_valu[2]='-'+new_valu[1]+'-'+new_valu[2]
-            print(new_valu)
-            new_valu.extend(valu[1:])
-            new_valu=[float(n) for n in new_valu[2:]]
-            print(new_valu)
-        else:
-            new_valu=valu[0].rsplit(" ")
-            new_valu.extend(valu[1:])
-            new_valu=[float(n) for n in new_valu[1:]]
-            print(new_valu)
-        real_part=imag_part=np.arange(len(new_fre_val),dtype=np.float64)
+        valu1=valu[0].rsplit(" ")
+        valu1.extend(valu[1:])
+        valu=[float(n) for n in valu1[1:]]
+        real=imag=np.arange(len(freq),dtype=np.float64)
 
-        real_part=np.array(new_valu[0:-1:2]) #the complex values are given in pairs
-        imag_part=new_valu[1:-1:2]
-        imag_part.append(new_valu[-1])
-        #real_part=np.array(new_valu[0:401])
-        #imag_part=np.array(new_valu[401:802])
-        imag_part=np.array(imag_part)
-        return real_part, imag_part, new_fre_val
+        real=np.array(valu[0:-1:2]) #the complex values are given in pairs
+        imag=valu[1:-1:2]
+        imag.append(valu[-1])
+        imag=np.array(imag)
+        return real, imag, freq
 
         #this function measures multiple times by calling the measure funtion, it is called nave times
         #which is the number of averages
@@ -525,6 +517,7 @@ class Calibrate(tk.Frame):
         self.ax1.plot(self.freq, self.S11m.imag)
         self.canvas.draw_idle()
         self.canvas.flush_events()
+        print(f'1 of {nave+1} scans complete')
         for n in range(nave):
             real_p, imag_p, self.freq=self.measure()
             self.S11m=(self.S11m*(n+1)+real_p+1j*imag_p)/(n+2) #averaging with each iteration
@@ -538,6 +531,7 @@ class Calibrate(tk.Frame):
             self.ax1.plot(self.freq, self.S11m.imag)
             self.canvas.draw_idle() #draw_idle is a gentle way to draw, it doesn't interupt the GUI
             self.canvas.flush_events()
+            print(f'{n+2} of {nave+1} scans complete')
         print('Measurement complete')   
 
 
@@ -605,7 +599,37 @@ class Batch(tk.Frame):
             print(self.values)
         except:
             print('Dividing by zero')
+    
+        #set the magnetic field. FH are values read from a calibration file, which can be updated 
+    def writevolt(self, direction):
+        dev = comedi.comedi_open("/dev/comedi0")
+        if direction=="par":
+            val = float(self.val)*FH1[0]+FH1[1]
+            chan=chanw
+        elif direction=="per":
+            val = float(self.val)*FH[0]+FH[1]
+            chan=chanw1
 
+        val = int(np.around(val))
+        if val < 0 and val > 4095:
+            val = datazero
+            print('Input value not available')
+        retvalw = comedi.comedi_data_write(dev, subdevw, chan, rngw, aref, val)
+        comedi.comedi_close(dev)
+        print(f"Value set to: {val}")
+    
+        #reset the magnet
+    def zerofield(self, direction):
+        if direction=="per":
+            chan=chanw1
+        elif direction=="par":
+            chan=chanw
+            
+        dev = comedi.comedi_open("/dev/comedi0")
+        retval = comedi.comedi_data_write(dev, subdevw, chan, rngw, aref, datazero)
+        print(f'Resetting DAQs to zero: {retval}')
+        comedi.comedi_close(dev)
+ 
     def batchscan(self):
         self.run=True
         
@@ -627,38 +651,8 @@ class Batch(tk.Frame):
         print('done')
         self.zerofield("per")
         self.zerofield("par")
-    
- #set the magnetic field. FH are values read from a calibration file, which can be updated 
-    def writevolt(self, direction):
-        dev = comedi.comedi_open("/dev/comedi0")
-        if direction=="par":
-            val = float(self.val)*FH1[0]+FH1[1]
-            chan=chanw
-        elif direction=="per":
-            val = float(self.val)*FH[0]+FH[1]
-            chan=chanw1
-
-        val = int(np.around(val))
-        if val < 0 and val > 4095:
-            val = datazero
-            print('Input value not available')
-        retvalw = comedi.comedi_data_write(dev, subdevw, chan, rngw, aref, val)
-        comedi.comedi_close(dev)
-        print(f"Value set to: {val}")
-    
-    #reset the magnet
-    def zerofield(self, direction):
-        if direction=="per":
-            chan=chanw1
-        elif direction=="par":
-            chan=chanw
-            
-        dev = comedi.comedi_open("/dev/comedi0")
-        retval = comedi.comedi_data_write(dev, subdevw, chan, rngw, aref, datazero)
-        print(f'Resetting DAQs to zero: {retval}')
-        comedi.comedi_close(dev)
-       
-    #receiving measurements from the network analyzer
+      
+        #receiving measurements from the network analyzer
     def measure(self):
         inst.write("TRS;WFS")
         inst.write('*OPC?')
@@ -670,30 +664,26 @@ class Batch(tk.Frame):
                 c=False
             except:
                 time.sleep(0.01)     
-
         inst.write("OFV") #requesting the frequency values
-        fre_val=inst.read("\n")
-        fre_val=fre_val.rsplit(", ")
-        new_fre_val=fre_val[0].rsplit(" ")
-        new_fre_val.extend(fre_val[1:])
-        new_fre_val=[float(n) for n in new_fre_val[1:]]
+        freq=inst.read("\n")
+        freq=freq.rsplit(", ")
+        freq1=freq[0].rsplit(" ")
+        freq1.extend(freq[1:])
+        freq=[float(n) for n in freq1[1:]]
 
         inst.write("OFD") #requesting the S11 measurements, this returns the real and imag part
         valu=inst.read("\n")
         valu=valu.rsplit(",")
-        new_valu=valu[0].rsplit(" ")
-        new_valu.extend(valu[1:])
-        new_valu=[float(n) for n in new_valu[1:]]
-        print(len(new_valu))
-        real_part=imag_part=np.arange(len(new_fre_val),dtype=np.float64)
+        valu1=valu[0].rsplit(" ")
+        valu1.extend(valu[1:])
+        valu=[float(n) for n in valu1[1:]]
+        real=imag=np.arange(len(freq),dtype=np.float64)
 
-        real_part=np.array(new_valu[0:-1:2]) #the complex values are given in pairs
-        imag_part=new_valu[1:-1:2]
-        imag_part.append(new_valu[-1])
-        imag_part=np.array(imag_part)
-        #real_part=np.array(new_valu[0:401])
-        #imag_part=np.array(new_valu[401:802])
-        return real_part, imag_part, new_fre_val
+        real=np.array(valu[0:-1:2]) #the complex values are given in pairs
+        imag=valu[1:-1:2]
+        imag.append(valu[-1])
+        imag=np.array(imag)
+        return real, imag, freq
 
     def docal(self):
         global Edf, Erf, Esf, Z0
@@ -724,6 +714,7 @@ class Batch(tk.Frame):
         self.ax1.legend()
         self.canvas.draw_idle()
         self.canvas.flush_events()
+        print(f'1 of {nave+1} scans complete')
         for n in range(nave):
             real_p, imag_p, self.freq=self.measure()
             self.S11m=(self.S11m*(n+1)+real_p+1j*imag_p)/(n+2) #averaging with each iteration
@@ -740,6 +731,8 @@ class Batch(tk.Frame):
             self.ax1.legend()
             self.canvas.draw_idle() #draw_idle is a gentle way to draw, it doesn't interupt the GUI
             self.canvas.flush_events()
+            print(f'{n+2} of {nave+1} scans complete')
+
         print('Measurement complete')   
 
     def file_save(self):
@@ -753,7 +746,7 @@ freq\tS11o\tS11l\tS11s\tEdf\tErf\tEsf\tS11a\tZa\tS11m'''
             looparray=np.column_stack((dataout, self.array[:,i*3:(i*3+3)]))
             np.savetxt(filename.rsplit('.')[0]+str(n)+'G.dat', looparray, delimiter='\t', header=intro, fmt=fmt, comments='')
         
-        #Viewer to analyze data
+      #Viewer to analyze data
 class Viewer(tk.Frame):
 
     def __init__(self, parent, controller):
@@ -896,21 +889,6 @@ class Viewer(tk.Frame):
         A=[] # 
 
 
-def popup_bonus(self):
-    l = tk.Label(self, text="Write \"open\", \"short\" and \"load\" for the corresponding measurements in the entry." )
-    l.pack()
-    b=tk.Button(self, text="Okay", command=win.destroy)
-    b.pack()
-
-def popup_showinfo():
-    showinfo("Window", "Hello world!")
-
-
-#some initial values
-nfpoints = 401
-nave = 10
-savelist=[]
-
 #use try here so the GUI can be used outside the experimental setup
 #this sets up the connection to the network analyzer and the magnet
 try:
@@ -925,6 +903,9 @@ try:
     inst.write(stop)
     inst.write("FMA") #Select ASCII data transfer format
     inst.write("HLD")
+    nave=10
+    savelist=[]
+    nfpoints=10
 except:
     print('Network analyser is not responding')
 
