@@ -1,0 +1,6 @@
+nokkrar mælingar voru framkvæmdar til þess að kanna áhrif IF cal,
+Mælingarnar:
+pyz02_no_cal 0 og 1  ##engin kvörðun
+pyz02_cal_only_scan_10G.dat ##kvarðaði fyrir loka scannið, þannig s, l, o er óbreytt
+pyz02_full_cal ##s, l, o og scan voru mæld eftir kvörðunina sem átti sér stað fyrir cal_only_scan
+pyz02_full_cal+1  ##hér var kvarðað fyrir scannið aftur 
