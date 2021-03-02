@@ -9,9 +9,9 @@ from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationTool
 import pyvisa
 import pandas as pd
 import datetime
-from scipy import signal
-
-
+from scipy import signal, optimize 
+import math
+from astropy import modeling
 
     #App class makes the frames and allows easy switching between them, frames are the different windows that pop up and cover the GUI,
     #calibrate, batch and viewer are "independent" frames
@@ -885,26 +885,37 @@ class Viewer(tk.Frame):
         tk.Button(self, text="Remove", command=self.listbox_delete).grid(row=4, column=15)
         self.filelist=[]
         
-        tk.Label(self, text="Analysis", relief='ridge').grid(row=7, column=13)
-        tk.Button(self, text="Peak", command=self.peak_finder).grid(row=8, column=14)
-        tk.Label(self, text="Order").grid(row=8, column=15)
-        self.entryorder=tk.Entry(self, width=5)
-        self.entryorder.insert(0,"20")
-        self.entryorder.grid(row=8, column=16)
-        tk.Button(self, text="Chi", command=self.chi).grid(row=12, column=14)
-
-        tk.Label(self, text="Sample").grid(row=9, column=13)
-        tk.Label(self, text="Width").grid(row=10, column=14)
-        tk.Label(self, text="Thickness").grid(row=11, column=14)
-        tk.Label(self, text="mm").grid(row=10, column=16, sticky='w')
-        tk.Label(self, text="nm").grid(row=11, column=16, sticky='w')
+      #  tk.Label(self, text="Analysis", relief='ridge').grid(row=7, column=13)
+      #  tk.Button(self, text="Peak", command=self.peak_finder).grid(row=8, column=14)
+      #  tk.Button(self, text="+", command=lambda: self.jump_right(0)).grid(row=8, column=17, sticky='e')
+      #  tk.Button(self, text="-", command=lambda: self.jump_left(0)).grid(row=8, column=18, sticky='w')
+      #  tk.Button(self, text="+", command=lambda: self.jump_right(1)).grid(row=9, column=17, sticky='e')
+      #  tk.Button(self, text="-", command=lambda: self.jump_left(1)).grid(row=9, column=18, sticky='w')
+      #  #tk.Button(self, text='Save', command=self.saveit).grid(row=10, column=17)
+      #  tk.Label(self, text="Order").grid(row=8, column=15)
+      #  self.entryorder=tk.Entry(self, width=5)
+      #  self.entryorder.insert(0,"20")
+      #  self.entryorder.grid(row=8, column=16)
+        tk.Button(self, text="Chi", command=self.chi).grid(row=13, column=14)
+       
+        self.circvar=tk.IntVar()
+        self.squarevar=tk.IntVar()
+        self.circ=tk.Checkbutton(self, text="Circular", variable=self.circvar)
+        self.circ.grid(row=11, column=17)
+        self.square=tk.Checkbutton(self, text="Square", variable=self.squarevar)
+        self.square.grid(row=12, column=17)
+        tk.Label(self, text="Sample", relief='ridge').grid(row=10, column=13)
+        tk.Label(self, text="Width").grid(row=11, column=14)
+        tk.Label(self, text="Thickness").grid(row=12, column=14)
+        tk.Label(self, text="mm").grid(row=11, column=16, sticky='w')
+        tk.Label(self, text="nm").grid(row=12, column=16, sticky='w')
 
         self.entrywidth = tk.Entry(self,width=5)
-        self.entrywidth.insert(0, "0")
-        self.entrywidth.grid(row=10, column=15)
+        self.entrywidth.insert(0, "4")
+        self.entrywidth.grid(row=11, column=15)
         self.entrythick = tk.Entry(self,width=5)
-        self.entrythick.insert(0, "0")
-        self.entrythick.grid(row=11, column=15)
+        self.entrythick.insert(0, "50")
+        self.entrythick.grid(row=12, column=15)
 
         self.fig = plt.figure(figsize=[10,9])
         gs1 = self.fig.add_gridspec(nrows=1, ncols=2, left=0.1, right=0.95, wspace=0.3)
@@ -922,26 +933,48 @@ class Viewer(tk.Frame):
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
         self.toolbar.grid(row=102, column=0, columnspan=10, sticky='nwe')
 
-    def peak_finder(self):
-        texti=pd.read_csv(self.filelist[0], index_col=False, comment= "#", sep='\t', engine='python')
-        try:
-            selected=self.elements[self.listbox.curselection()[0]]
-        except:
-            selected='Za'
+   # def peak_finder(self):
+   #     texti=pd.read_csv(self.filelist[0], index_col=False, comment= "#", sep='\t', engine='python')
+   #     try:
+   #         selected=self.elements[self.listbox.curselection()[0]]
+   #     except:
+   #         selected='Za'
 
-        self.plot() 
-        frequency=texti["freq"].to_numpy(dtype=np.complex).real
-        real=texti[selected].to_numpy(dtype=np.complex).real
-        imag=texti[selected].to_numpy(dtype=np.complex).imag
-        entryorder=int(self.entryorder.get())
-        self.peaks_real, self.peaks_imag = signal.argrelextrema(real,np.greater,order=entryorder), signal.argrelextrema(imag,np.greater,order=entryorder)
-        self.minima_real, self.minima_imag = signal.argrelextrema(real,np.less,order=entryorder), signal.argrelextrema(imag,np.less,order=entryorder)
+   #     self.plot() 
+   #     frequency=texti["freq"].to_numpy(dtype=np.complex).real
+   #     real=texti[selected].to_numpy(dtype=np.complex).real
+   #     imag=texti[selected].to_numpy(dtype=np.complex).imag
+   #     entryorder=int(self.entryorder.get())
+   #     self.peaks_real, self.peaks_imag = signal.argrelextrema(real,np.greater,order=entryorder), signal.argrelextrema(imag,np.greater,order=entryorder)
+   #     self.minima_real, self.minima_imag = signal.argrelextrema(real,np.less,order=entryorder), signal.argrelextrema(imag,np.less,order=entryorder)
 
-        self.ax.plot(frequency[self.peaks_real],-1*real[self.peaks_real], 'o', frequency[self.minima_real],-1*real[self.minima_real], 'o')
-        self.ax.plot(frequency[self.peaks_imag],imag[self.peaks_imag], 'o', frequency[self.minima_imag],imag[self.minima_imag], 'o')
-        
-        self.canvas.draw()
-   
+   #     self.ax.plot(frequency[self.peaks_real],real[self.peaks_real], 'o', frequency[self.minima_real],real[self.minima_real], 'o')
+   #     self.ax.plot(frequency[self.peaks_imag],imag[self.peaks_imag], 'o', frequency[self.minima_imag],imag[self.minima_imag], 'o')
+   #     
+   #     self.canvas.draw()
+
+   #def jump_right(self,dex):
+        #self.ax.clear()
+        #self.peak_finder()
+        #if dex==1:
+        #    self.indexmin=self.indexmin+1
+        #elif dex==0:
+        #    self.indexmax=self.indexmax+1
+        #self.ax.plot(self.freq[self.peaks_real[0,self.indexmax]],self.real[self.peaks_real[0,self.indexmax]], 'x')
+        #self.ax.plot(self.freq[self.minima_imag[0,self.indexmin]],self.imag[self.minima_imag[0,self.indexmin]], 'x')
+        #self.canvas.draw()
+  
+   # def jump_left(self,dex):
+        #self.ax.clear()
+        #self.peak_finder()
+        #if dex==1:
+        #    self.indexmin=self.indexmin-1
+        #elif dex==0:
+        #    self.indexmax=self.indexmax-1
+        #self.ax.plot(self.freq[self.peaks_real[0,self.indexmax]],self.real[self.peaks_real[0,self.indexmax]], 'x')
+        #self.ax.plot(self.freq[self.minima_imag[0,self.indexmin]],self.imag[self.minima_imag[0,self.indexmin]], 'x')
+        #self.canvas.draw()
+
     def _quit(self):
         app.quit()
         app.destroy()
@@ -949,7 +982,7 @@ class Viewer(tk.Frame):
         #creates a list of .dat files to plot
     def file_open(self):
 
-        t=tk.filedialog.askopenfilenames()
+        t=tk.filedialog.askopenfilenames(initialdir='/home/at/FMR/netgreinir/maelingar/')
         self.filelist.extend(list(t))
         self.listboxopen.delete(0,self.listboxopen.size())
 
@@ -1012,55 +1045,83 @@ class Viewer(tk.Frame):
             plotlist = self.filelist
 
         self.ax.clear()
+        self.ax1.clear()
         self.ax.set_xlabel('$f$ [Hz]')
-        self.ax.set_ylabel('S11 resistance [$\Omega$]')
+        self.ax.set_ylabel('Re('+selected+') [$\Omega$]')
+        self.ax1.set_xlabel('$f$ [Hz]')
+        self.ax1.set_ylabel('Im('+selected +') [$\Omega$]')
         for item in plotlist:
             texti=pd.read_csv(item, index_col=False, comment= "#", sep='\t', engine='python')
             x=texti['freq'].to_numpy(dtype=np.complex).real
-            y=texti[selected].to_numpy(dtype=np.complex).real*-1
+            y=texti[selected].to_numpy(dtype=np.complex).real
             y1=texti[selected].to_numpy(dtype=np.complex).imag
 
-            #custom_lines = [plt.Line2D([0], [0]), plt.Line2D([0], [0])]
-            self.ax.plot(x,y,x,y1)
-            self.ax.legend(["Re "+selected, "Im "+selected])
+            self.ax.plot(x,y)
+            self.ax1.plot(x,y1)
 
+        
+        legend=[item.split('/')[-1] for item in plotlist]
+        self.ax.legend(legend)
         self.canvas.draw()
 
 
     def chi(self):
-        infstruct=[] #takes multiple measurements of the same material, but with differing thickness
-        f=[] #is the frequency, assumed to be the same in each scan
-        S=[] # is the S11 reflection parameter
         self.chi = np.zeros(nfpoints, dtype=np.complex128)
-        cz=[] #complex uncorrected Z(impedance)
 
-        nfiles=[] #number of files that contain scans that are read
-        #Z=50*(1+S)/(1-S)
-        #for n in np.arange(len(nfiles)):
-        #    cz.append(Z[:,n+1]-Z[:,1])
+        string=self.filelist[0].rsplit('_')
+        string.pop(-1)
+        string.append('-0.0G.dat')
+        nstring='_'
+        nstring=nstring.join(string)
+        filezero=pd.read_csv(nstring, index_col=False, comment='#', sep='\t', engine='python')
+        Zzero=filezero['Za'].to_numpy(dtype=np.complex)
 
         #parameters to calc chi, susceptibility of film
         wid=float(self.entrywidth.get())*1e-3
-        A=wid**2
+        if int(self.circvar.get())==1 and int(self.squarevar.get())==0:
+            A=np.pi*(wid/2)**2
+            print('circ')
+        elif int(self.squarevar.get())==1 and int(self.circvar.get())==0:
+            A=wid**2
+            print('square')
+        else:
+            print('Choose shape of sample')
+
         mu=np.pi*4e-7
         t=float(self.entrythick.get())*1e-9
+        V=t*A
+        W=16e-6
+        
+        selection=self.listboxopen.curselection()
+        if len(selection) > 0:
+            plotlist = [item for n, item in self.filelist if n in selection]
+        else:
+            plotlist = self.filelist
 
-        texti=pd.read_csv(self.filelist[0], index_col=False, comment= "#", sep='\t', engine='python')
-        real=texti["Za"].to_numpy(dtype=np.complex).real
-        imag=texti["Za"].to_numpy(dtype=np.complex).imag
-        freq=texti["freq"].to_numpy(dtype=np.complex).real
-        chi=imag/(1*mu*t)
-        chii=real/(wid*1*mu*t)
-        self.chi=chi-1j*chii
-        print(self.chi)
-        print(wid)
         self.ax.clear()
+        self.ax1.clear()
         self.ax.set_xlabel('$f$ [Hz]')
-        self.ax.set_ylabel('Chi')
-        self.ax.plot(freq,chi,freq,chii*-1)
-        #self.ax.plot(freq,self.chi.imag)
-        self.canvas.draw()
+        self.ax.set_ylabel('Re($\chi$)')
+        self.ax1.set_xlabel('$f$ [Hz]')
+        self.ax1.set_ylabel('Im($\chi$)')
 
+        for item in plotlist:
+            texti=pd.read_csv(item, index_col=False, comment= "#", sep='\t', engine='python')
+            freq=texti['freq'].to_numpy(dtype=np.complex).real
+            real=texti['Za'].to_numpy(dtype=np.complex).real
+            imag=texti['Za'].to_numpy(dtype=np.complex).imag
+            real=real-Zzero.real
+            imag=imag-Zzero.imag
+            chi=imag*W/(1*mu*V*self.freq*2*np.pi)
+            chii=real*W/(1*mu*V*self.freq*2*np.pi)
+            self.chi=chi+1j*chii
+            self.ax.plot(freq,self.chi.real)
+            self.ax1.plot(freq,self.chi.imag)
+        
+        legend=[item.split('/')[-1].split('.')[0]+'G' for item in plotlist]
+        self.ax.legend(legend)
+        self.ax1.legend(legend)
+        self.canvas.draw()
 
 class Viewer2(tk.Frame):
 
@@ -1093,24 +1154,53 @@ class Viewer2(tk.Frame):
         
         tk.Label(self, text="Analysis", relief='ridge').grid(row=7, column=13)
         tk.Button(self, text="Peak", command=self.peak_finder).grid(row=8, column=14)
+        tk.Button(self, text="+", command=lambda: self.jump_right(0)).grid(row=8, column=17, sticky='e')
+        tk.Button(self, text="-", command=lambda: self.jump_left(0)).grid(row=8, column=18, sticky='w')
+        tk.Button(self, text="+", command=lambda: self.jump_right(1)).grid(row=9, column=17, sticky='e')
+        tk.Button(self, text="-", command=lambda: self.jump_left(1)).grid(row=9, column=18, sticky='w')
+        tk.Button(self, text='Save', command=self.saveit).grid(row=10, column=17)
         tk.Label(self, text="Order").grid(row=8, column=15)
         self.entryorder=tk.Entry(self, width=5)
         self.entryorder.insert(0,"20")
         self.entryorder.grid(row=8, column=16)
-        tk.Button(self, text="Chi", command=self.chi).grid(row=12, column=14)
+        tk.Button(self, text="Chi", command=self.chi).grid(row=13, column=14)
+       
+        self.circvar=tk.IntVar()
+        self.squarevar=tk.IntVar()
+        self.circ=tk.Checkbutton(self, text="Circular", variable=self.circvar)
+        self.circ.grid(row=11, column=17)
+        self.square=tk.Checkbutton(self, text="Square", variable=self.squarevar)
+        self.square.grid(row=12, column=17)
+        tk.Label(self, text="Sample", relief='ridge').grid(row=10, column=13)
+        tk.Label(self, text="Width").grid(row=11, column=14)
+        tk.Label(self, text="Thickness").grid(row=12, column=14)
+        tk.Label(self, text="mm").grid(row=11, column=16, sticky='w')
+        tk.Label(self, text="nm").grid(row=12, column=16, sticky='w')
 
-        tk.Label(self, text="Sample").grid(row=9, column=13)
-        tk.Label(self, text="Width").grid(row=10, column=14)
-        tk.Label(self, text="Thickness").grid(row=11, column=14)
-        tk.Label(self, text="mm").grid(row=10, column=16, sticky='w')
-        tk.Label(self, text="nm").grid(row=11, column=16, sticky='w')
+        tk.Label(self, text="FWHM", relief='ridge').grid(row=14, column=14)
+        self.entrysigma=tk.Entry(self, width=5)
+        self.entrysigma.insert(0,"1000")
+        self.entrysigma.grid(row=15, column=14)
+        tk.Button(self, text='Determine', command=self.fwhm).grid(row=15, column=15)
+        tk.Label(self, text="Mean").grid(row=16,column=15)
+        self.entryMean=tk.Entry(self,width=8)
+        self.entryMean.insert(0, "0")
+        self.entryMean.grid(row=16,column=16)
+        tk.Label(self, text="Amplitude").grid(row=17,column=15)
+        self.entryAmpl=tk.Entry(self,width=8)
+        self.entryAmpl.insert(0, "0")
+        self.entryAmpl.grid(row=17,column=16)
+        tk.Label(self, text='Stddev').grid(row=18,column=15)
+        self.entryStd=tk.Entry(self,width=8)
+        self.entryStd.insert(0, "0")
+        self.entryStd.grid(row=18,column=16)
 
         self.entrywidth = tk.Entry(self,width=5)
-        self.entrywidth.insert(0, "0")
-        self.entrywidth.grid(row=10, column=15)
+        self.entrywidth.insert(0, "4")
+        self.entrywidth.grid(row=11, column=15)
         self.entrythick = tk.Entry(self,width=5)
-        self.entrythick.insert(0, "0")
-        self.entrythick.grid(row=11, column=15)
+        self.entrythick.insert(0, "50")
+        self.entrythick.grid(row=12, column=15)
 
         self.fig = plt.figure(figsize=[10,9])
         self.ax = plt.subplot()
@@ -1124,59 +1214,157 @@ class Viewer2(tk.Frame):
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
         self.toolbar.grid(row=102, column=0, columnspan=10, sticky='nwe')
 
+        self.indexmax=0
+        self.indexmin=0
+        self.peakpos=[0,0]
+        self.iterator=0
+
+    def saveit(self):
+        skjal=open('/home/at/FMR/maelingar/utgildi.txt','a')
+        skjal.write()
+
+    def fwhm(self):
+        self.iterator +=1
+        print(self.iterator)
+        dw = int((self.peaks_imag[0,self.indexmax]-self.peaks_imag[0,self.indexmax-1])/2)
+        dw1 =int((self.peaks_imag[0,self.indexmax+1]-self.peaks_imag[0,self.indexmax])/2)
+        if dw>dw1:
+            dw=dw1
+        freq=self.freq[(self.peaks_imag[0,self.indexmax]-dw):(self.peaks_imag[0,self.indexmax]+dw)]
+        imag=self.imag[(self.peaks_imag[0,self.indexmax]-dw):(self.peaks_imag[0,self.indexmax]+dw)]
+        shift=min(imag)
+        imag=(-1)*shift+imag
+        print('selfindicator:'+str(self.indicator)) 
+        topindex=self.peaks_imag[0,self.indexmax]
+        fitter = modeling.fitting.LevMarLSQFitter()
+        model = modeling.models.Gaussian1D(amplitude=self.imag[topindex], mean=self.freq[topindex], stddev=(freq[-1]-freq[0])/2)
+        if self.iterator>=2:
+            model=self.fitted_model
+
+        self.fitted_model = fitter(model, freq, imag)
+        ampl=self.fitted_model.amplitude.value
+        mean=self.fitted_model.mean.value
+        stddev=self.fitted_model.stddev.value
+        self.entryAmpl.insert(0,ampl)
+        self.entryMean.insert(0,mean)
+        self.entryStd.insert(0,stddev)
+        self.ax.plot(freq, self.fitted_model(freq)+shift)
+        self.canvas.draw()
+
+
+
     def peak_finder(self):
+        self.iterator=0
         texti=pd.read_csv(self.filelist[0], index_col=False, comment= "#", sep='\t', engine='python')
         try:
             selected=self.elements[self.listbox.curselection()[0]]
         except:
             selected='Za'
-
-        self.plot() 
-        frequency=texti["freq"].to_numpy(dtype=np.complex).real
-        real=texti[selected].to_numpy(dtype=np.complex).real
-        imag=texti[selected].to_numpy(dtype=np.complex).imag
-        entryorder=int(self.entryorder.get())
-        self.peaks_real, self.peaks_imag = signal.argrelextrema(real,np.greater,order=entryorder), signal.argrelextrema(imag,np.greater,order=entryorder)
-        self.minima_real, self.minima_imag = signal.argrelextrema(real,np.less,order=entryorder), signal.argrelextrema(imag,np.less,order=entryorder)
-
-        self.ax.plot(frequency[self.peaks_real],-1*real[self.peaks_real], 'o', frequency[self.minima_real],-1*real[self.minima_real], 'o')
-        self.ax.plot(frequency[self.peaks_imag],imag[self.peaks_imag], 'o', frequency[self.minima_imag],imag[self.minima_imag], 'o')
         
+        entryorder=int(self.entryorder.get())
+
+        if self.indicator==0:
+            self.plot()
+            frequency=texti["freq"].to_numpy(dtype=np.complex).real
+            self.freq=frequency
+            self.real=texti[selected].to_numpy(dtype=np.complex).real
+            self.imag=texti[selected].to_numpy(dtype=np.complex).imag
+            
+        elif self.indicator==1:
+            self.chi()
+            frequency=self.freq
+            self.real=self.chii.real
+            self.imag=self.chii.imag
+
+        self.peaks_real, self.peaks_imag = signal.argrelextrema(self.real,np.greater,order=entryorder), signal.argrelextrema(self.imag,np.greater,order=entryorder)
+        self.minima_real, self.minima_imag = signal.argrelextrema(self.real,np.less,order=entryorder), signal.argrelextrema(self.imag,np.less,order=entryorder)
+
+        self.ax.plot(frequency[self.peaks_real],self.real[self.peaks_real], 'o')#, frequency[self.minima_real],self.real[self.minima_real], 'o')
+        self.ax.plot(frequency[self.peaks_imag],self.imag[self.peaks_imag], 'o')#, frequency[self.minima_imag],self.imag[self.minima_imag], 'o')
+
         self.canvas.draw()
-   
+        self.peaks_real=np.array(self.peaks_real)
+        self.peaks_imag=np.array(self.peaks_imag)
+
+    def jump_right(self,dex):
+        self.ax.clear()
+        self.peak_finder()
+        if dex==1:
+            self.indexmin=self.indexmin+1
+        elif dex==0:
+            self.indexmax=self.indexmax+1
+        self.ax.plot(self.freq[self.peaks_imag[0,self.indexmax]],self.imag[self.peaks_imag[0,self.indexmax]], 'x')
+        #self.ax.plot(self.freq[self.minima_imag[0,self.indexmin]],self.imag[self.minima_imag[0,self.indexmin]], 'x')
+        self.canvas.draw()
+  
+    def jump_left(self,dex):
+        self.ax.clear()
+        self.peak_finder()
+        if dex==1:
+            self.indexmin=self.indexmin-1
+        elif dex==0:
+            self.indexmax=self.indexmax-1
+        self.ax.plot(self.freq[self.peaks_imag[0,self.indexmax]],self.imag[self.peaks_imag[0,self.indexmax]], 'x')
+        #self.ax.plot(self.freq[self.minima_imag[0,self.indexmin]],self.imag[self.minima_imag[0,self.indexmin]], 'x')
+        self.canvas.draw()
+
+    def fit(self):
+        def make_norm_dist(x,mean,sd):
+            return 1.0/(sd*np.sqrt(2*np.pi))*np.exp(-(x-mean)**2/(2*sd**2))
+
     def chi(self):
-        infstruct=[] #takes multiple measurements of the same material, but with differing thickness
-        f=[] #is the frequency, assumed to be the same in each scan
-        S=[] # is the S11 reflection parameter
-        self.chi = np.zeros(nfpoints, dtype=np.complex128)
-        cz=[] #complex uncorrected Z(impedance)
+        self.chii = np.zeros(nfpoints, dtype=np.complex128)
+        string=self.filelist[0].rsplit('_')
+        string.pop(-1)
+        string.append('-0.0G.dat')
+        nstring='_'
+        nstring=nstring.join(string)
+        filezero=pd.read_csv(nstring, index_col=False, comment='#', sep='\t', engine='python')
+        Zzero=filezero['Za'].to_numpy(dtype=np.complex)
 
-        nfiles=[] #number of files that contain scans that are read
-        #Z=50*(1+S)/(1-S)
-        #for n in np.arange(len(nfiles)):
-        #    cz.append(Z[:,n+1]-Z[:,1])
-
+        self.indicator=1
         #parameters to calc chi, susceptibility of film
         wid=float(self.entrywidth.get())*1e-3
-        A=wid**2
+        if int(self.circvar.get())==1 and int(self.squarevar.get())==0:
+            A=np.pi*(wid/2)**2
+            print('circ')
+        elif int(self.squarevar.get())==1 and int(self.circvar.get())==0:
+            A=wid**2
+            print('square')
+        else:
+            print('Choose shape of sample')
+
         mu=np.pi*4e-7
         t=float(self.entrythick.get())*1e-9
+        V=t*A
+        W=16e-6
 
-        texti=pd.read_csv(self.filelist[0], index_col=False, comment= "#", sep='\t', engine='python')
-        real=texti["Za"].to_numpy(dtype=np.complex).real
-        imag=texti["Za"].to_numpy(dtype=np.complex).imag
-        freq=texti["freq"].to_numpy(dtype=np.complex).real
-        chi=imag/(1*mu*t)
-        chii=real/(wid*1*mu*t)
-        self.chi=chi-1j*chii
-        print(self.chi)
+        selection=self.listboxopen.curselection()
+        if len(selection) > 0:
+            plotlist = [item for n, item in self.filelist if n in selection]
+        else:
+            plotlist = self.filelist
+
         self.ax.clear()
         self.ax.set_xlabel('$f$ [Hz]')
-        self.ax.set_ylabel('Chi')
-        self.ax.plot(freq,self.chi.real,freq,self.chi.imag)
-        #self.ax.plot(freq,self.chi.imag)
-        self.canvas.draw()
+        self.ax.set_ylabel('$\chi$')
 
+        for item in plotlist:
+            texti=pd.read_csv(item, index_col=False, comment= "#", sep='\t', engine='python')
+            self.freq=texti['freq'].to_numpy(dtype=np.complex).real
+            real=texti['Za'].to_numpy(dtype=np.complex).real
+            imag=texti['Za'].to_numpy(dtype=np.complex).imag
+            #real=real-Zzero.real
+            #imag=imag-Zzero.imag
+            chi=imag*W/(1*mu*V*self.freq*2*np.pi)
+            chii=real*W/(1*mu*V*self.freq*2*np.pi)
+            self.chii=chi+1j*chii
+            re='Re($\chi$) '+item.split('/')[-1].split('.')[0]+'G'
+            im='Im($\chi$) '+item.split('/')[-1].split('.')[0]+'G'
+            self.ax.plot(self.freq,self.chii.real,label=re)
+            self.ax.plot(self.freq,self.chii.imag,label=im)
+        self.ax.legend()#legend)
+        self.canvas.draw()
 
     def _quit(self):
         app.quit()
@@ -1184,8 +1372,7 @@ class Viewer2(tk.Frame):
 
         #creates a list of .dat files to plot
     def file_open(self):
-
-        t=tk.filedialog.askopenfilenames()
+        t=tk.filedialog.askopenfilenames(initialdir='/home/at/FMR/netgreinir/maelingar/')
         self.filelist.extend(list(t))
         self.listboxopen.delete(0,self.listboxopen.size())
 
@@ -1246,23 +1433,23 @@ class Viewer2(tk.Frame):
             plotlist = [item for n, item in self.filelist if n in selection]
         else:
             plotlist = self.filelist
-
+        self.indicator=0
         self.ax.clear()
         self.ax.set_xlabel('$f$ [Hz]')
-        self.ax.set_ylabel('S11 resistance [$\Omega$]')
+        self.ax.set_ylabel(selected +' [$\Omega$]')
         for item in plotlist:
             texti=pd.read_csv(item, index_col=False, comment= "#", sep='\t', engine='python')
             x=texti['freq'].to_numpy(dtype=np.complex).real
-            y=texti[selected].to_numpy(dtype=np.complex).real*-1
+            y=texti[selected].to_numpy(dtype=np.complex).real
             y1=texti[selected].to_numpy(dtype=np.complex).imag
 
             #custom_lines = [plt.Line2D([0], [0]), plt.Line2D([0], [0])]
             self.ax.plot(x,y,x,y1)
-            self.ax.legend(["Re "+selected, "Im "+selected])
-
+            #self.ax.legend(["Re "+selected, "Im "+selected])
+        legend=[item.split('/')[-1] for item in plotlist]
+        self.ax.legend(legend)
         self.canvas.draw()
-
-    
+        
 
 #use try here so the GUI can be used outside the experimental setup
 #this sets up the connection to the network analyzer and the magnet
