@@ -39,7 +39,7 @@ class App(tk.Tk):
 
             frame.grid(row = 0, column = 0, sticky="nsew")
 
-        self.show_frame(Calibrate)
+        self.show_frame(Viewer2)
         #raises the page to the top with tkraise()
     def show_frame(self, cont):
         frame = self.frames[cont]
@@ -128,7 +128,7 @@ class StartPage(tk.Frame):
                     f.write("\t")
             f.write("\n")
         f.close
- 
+
         #use open, short, load to calibrate the measurement   
     def docal(self):
         global Edf, Erf, Esf, Z0
@@ -1158,19 +1158,21 @@ class Viewer2(tk.Frame):
         tk.Button(self, text="-", command=lambda: self.jump_left(0)).grid(row=8, column=18, sticky='w')
         tk.Button(self, text="+", command=lambda: self.jump_right(1)).grid(row=9, column=17, sticky='e')
         tk.Button(self, text="-", command=lambda: self.jump_left(1)).grid(row=9, column=18, sticky='w')
-        tk.Button(self, text='Save', command=self.saveit).grid(row=10, column=17)
+        tk.Button(self, text='Save', command=self.save).grid(row=10, column=17)
+        tk.Button(self, text='Save as', command=self.save_as).grid(row=11, column=17)
         tk.Label(self, text="Order").grid(row=8, column=15)
         self.entryorder=tk.Entry(self, width=5)
-        self.entryorder.insert(0,"20")
+        self.entryorder.insert(0,"25")
         self.entryorder.grid(row=8, column=16)
         tk.Button(self, text="Chi", command=self.chi).grid(row=13, column=14)
        
         self.circvar=tk.IntVar()
+        self.circvar.set(1)
         self.squarevar=tk.IntVar()
         self.circ=tk.Checkbutton(self, text="Circular", variable=self.circvar)
-        self.circ.grid(row=11, column=17)
+        self.circ.grid(row=13, column=15)
         self.square=tk.Checkbutton(self, text="Square", variable=self.squarevar)
-        self.square.grid(row=12, column=17)
+        self.square.grid(row=13, column=16)
         tk.Label(self, text="Sample", relief='ridge').grid(row=10, column=13)
         tk.Label(self, text="Width").grid(row=11, column=14)
         tk.Label(self, text="Thickness").grid(row=12, column=14)
@@ -1178,22 +1180,30 @@ class Viewer2(tk.Frame):
         tk.Label(self, text="nm").grid(row=12, column=16, sticky='w')
 
         tk.Label(self, text="FWHM", relief='ridge').grid(row=14, column=14)
-        self.entrysigma=tk.Entry(self, width=5)
-        self.entrysigma.insert(0,"1000")
-        self.entrysigma.grid(row=15, column=14)
-        tk.Button(self, text='Determine', command=self.fwhm).grid(row=15, column=15)
-        tk.Label(self, text="Mean").grid(row=16,column=15)
+        #self.entrysigma=tk.Entry(self, width=5)
+        #self.entrysigma.insert(0,"1000")
+        #self.entrysigma.grid(row=15, column=14)
+        tk.Button(self, text='Determine', command=lambda: self.fwhm(0)).grid(row=15, column=15)
+        tk.Button(self, text='Rerun', command=lambda: self.fwhm(1)).grid(row=15,column=16)
+        tk.Label(self, text="Mean").grid(row=17,column=15)
         self.entryMean=tk.Entry(self,width=8)
         self.entryMean.insert(0, "0")
-        self.entryMean.grid(row=16,column=16)
-        tk.Label(self, text="Amplitude").grid(row=17,column=15)
+        self.entryMean.grid(row=17,column=16)
+        tk.Label(self, text="Amplitude").grid(row=16,column=15)
         self.entryAmpl=tk.Entry(self,width=8)
         self.entryAmpl.insert(0, "0")
-        self.entryAmpl.grid(row=17,column=16)
+        self.entryAmpl.grid(row=16,column=16)
         tk.Label(self, text='Stddev').grid(row=18,column=15)
         self.entryStd=tk.Entry(self,width=8)
         self.entryStd.insert(0, "0")
         self.entryStd.grid(row=18,column=16)
+        tk.Label(self, text='GHz').grid(row=17,column=17, sticky='w')
+        tk.Label(self, text='GHz').grid(row=18,column=17, sticky='w')
+        tk.Label(self, text='GHz').grid(row=19,column=17, sticky='w')
+        tk.Label(self, text='FWHM').grid(row=19, column=15)
+        self.entryFWHM=tk.Entry(self, width=8)
+        self.entryFWHM.insert(0,"0")
+        self.entryFWHM.grid(row=19, column=16)
 
         self.entrywidth = tk.Entry(self,width=5)
         self.entrywidth.insert(0, "4")
@@ -1207,50 +1217,77 @@ class Viewer2(tk.Frame):
         self.ax.set_xlabel('$f$ [Hz]')
         self.ax.set_ylabel('S11')
         
-        self.canvas = FigureCanvasTkAgg(self.fig, self)
+        self.canvas=FigureCanvasTkAgg(self.fig, self)
         self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=100, columnspan=10, sticky='n')
         self.toolbarframe=tk.Frame(self)
         self.toolbarframe.grid(row=101, column=0, columnspan=10, sticky='nwe')
-        self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
+        self.toolbar=NavigationToolbar2Tk(self.canvas, self.toolbarframe)
         self.toolbar.grid(row=102, column=0, columnspan=10, sticky='nwe')
 
         self.indexmax=0
         self.indexmin=0
         self.peakpos=[0,0]
         self.iterator=0
+    
+    def save_as(self):
+        filename = tk.filedialog.asksaveasfilename(defaultextension="*.txt")
+        skjal=open(filename,'w')
+        skjal.write('Filename\tAmplitude\tMean[Hz]\tStddev[Hz]\tFWHM[Hz]\n') 
+        skjal.close()
 
-    def saveit(self):
-        skjal=open('/home/at/FMR/maelingar/utgildi.txt','a')
-        skjal.write()
+    def save(self):
+        t=tk.filedialog.askopenfilename()
+        skjal=open(t,'a')
+        nafn=self.filelist[0].split('/')[-1].split('.')[0]+'G'
+        
+        lina=f'{nafn}\t{self.ampl}\t{self.mean}\t{self.stddev}\t{self.FWHMvalue}\n'
+        skjal.write(lina)
+        skjal.close()
 
-    def fwhm(self):
+
+    def fwhm(self, dex):
         self.iterator +=1
-        print(self.iterator)
-        dw = int((self.peaks_imag[0,self.indexmax]-self.peaks_imag[0,self.indexmax-1])/2)
-        dw1 =int((self.peaks_imag[0,self.indexmax+1]-self.peaks_imag[0,self.indexmax])/2)
+        dw=int((self.peaks_imag[0,self.indexmax]-self.peaks_imag[0,self.indexmax-1])/2)
+        dw1=int((self.peaks_imag[0,self.indexmax+1]-self.peaks_imag[0,self.indexmax])/2)
         if dw>dw1:
             dw=dw1
-        freq=self.freq[(self.peaks_imag[0,self.indexmax]-dw):(self.peaks_imag[0,self.indexmax]+dw)]
-        imag=self.imag[(self.peaks_imag[0,self.indexmax]-dw):(self.peaks_imag[0,self.indexmax]+dw)]
-        shift=min(imag)
-        imag=(-1)*shift+imag
-        print('selfindicator:'+str(self.indicator)) 
-        topindex=self.peaks_imag[0,self.indexmax]
-        fitter = modeling.fitting.LevMarLSQFitter()
-        model = modeling.models.Gaussian1D(amplitude=self.imag[topindex], mean=self.freq[topindex], stddev=(freq[-1]-freq[0])/2)
+        
+        fitter=modeling.fitting.LevMarLSQFitter()
+        if dex==0:
+            self.freqfit=self.freq[(self.peaks_imag[0,self.indexmax]-dw):(self.peaks_imag[0,self.indexmax]+dw)]
+            self.imagfit=self.imag[(self.peaks_imag[0,self.indexmax]-dw):(self.peaks_imag[0,self.indexmax]+dw)]
+            self.shift=min(self.imagfit)
+            self.imagfit=(-1)*self.shift+self.imagfit
+            topindex=self.peaks_imag[0,self.indexmax]
+            model=modeling.models.Gaussian1D(amplitude=self.imag[topindex], mean=self.freq[topindex], stddev=(self.freqfit[-1]-self.freqfit[0])/2)
+        else:
+            meanvalue=float(self.entryMean.get())*10**9
+            stddevvalue=float(self.entryStd.get())*10**9
+            model=modeling.models.Gaussian1D(amplitude=self.fitted_model.amplitude.value, mean=meanvalue, stddev=stddevvalue)
+            self.freqfit=self.freqfit[0:int(len(self.freqfit)*7/8)]
+            self.imagfit=self.imagfit[0:len(self.freqfit)]
+
         if self.iterator>=2:
             model=self.fitted_model
 
-        self.fitted_model = fitter(model, freq, imag)
-        ampl=self.fitted_model.amplitude.value
-        mean=self.fitted_model.mean.value
-        stddev=self.fitted_model.stddev.value
-        self.entryAmpl.insert(0,ampl)
-        self.entryMean.insert(0,mean)
-        self.entryStd.insert(0,stddev)
-        self.ax.plot(freq, self.fitted_model(freq)+shift)
+        self.fitted_model = fitter(model, self.freqfit, self.imagfit)
+        self.ampl=self.fitted_model.amplitude.value+self.shift
+        self.mean=self.fitted_model.mean.value
+        self.stddev=self.fitted_model.stddev.value
+        self.entryAmpl.delete(1,'end')
+        self.entryMean.delete(1,'end')
+        self.entryStd.delete(1,'end')
+        self.entryFWHM.delete(1,'end')
+        self.entryAmpl.insert(0,round(self.ampl,2))
+        self.entryMean.insert(0,round(self.mean*10**-9,2))
+        self.entryStd.insert(0,round(self.stddev*10**-9,2))
+        self.FWHMvalue=2*np.sqrt(2*np.log(2))*self.stddev
+        self.entryFWHM.insert(0,round(self.FWHMvalue*10**-9,2))
+        self.ax.clear()
+        self.peak_finder()
+        freq=self.freq[(self.peaks_imag[0,self.indexmax]-dw):(self.peaks_imag[0,self.indexmax]+dw)]
+        self.ax.plot(freq, self.fitted_model(freq)+self.shift)
         self.canvas.draw()
-
 
 
     def peak_finder(self):
@@ -1433,6 +1470,8 @@ class Viewer2(tk.Frame):
             plotlist = [item for n, item in self.filelist if n in selection]
         else:
             plotlist = self.filelist
+
+        self.indexmax=0
         self.indicator=0
         self.ax.clear()
         self.ax.set_xlabel('$f$ [Hz]')
