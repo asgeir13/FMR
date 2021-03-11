@@ -1136,49 +1136,57 @@ class Viewer2(tk.Frame):
         tk.Button(self, text="Pair", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=2, column=12, sticky='n')
 
         tk.Label(self, text="Plotter", relief='ridge').grid(row=3, column=13)
-        tk.Button(self, text="Open", command=self.file_open).grid(row=4, column=14, pady=10, padx=5)
-        tk.Button(self, text="Plot", command=self.plot).grid(row=6, column=13)
+        tk.Button(self, text="Open", command=self.file_open).grid(row=4, column=15, pady=10, padx=5)
+        tk.Button(self, text="Plot", command=self.plot, width=3).grid(row=6, column=17,sticky='n')
         
-        tk.Label(self, text="Select array to plot: ").grid(row=5, column=13)
+        tk.Label(self, text="Array").grid(row=5, column=14)
         self.listbox=tk.Listbox(self, width=8, height=1)
-        self.listbox.grid(row=5, column=14, sticky='w')
+        self.listbox.grid(row=5, column=15)
         self.elements=["Za", "S11a", "S11m", "S11o", "S11l", "S11s", "Edf", "Erf", "Esf"]
         
         for i, ele in enumerate(self.elements):
             self.listbox.insert(i, ele)
         
-        self.listboxopen=tk.Listbox(self, selectmode=tk.EXTENDED, height=5)
-        self.listboxopen.grid(row=6, column=14, columnspan=2)
-        tk.Button(self, text="Remove", command=self.listbox_delete).grid(row=4, column=15)
+        self.listboxopen=tk.Listbox(self, selectmode=tk.EXTENDED, height=6)
+        self.listboxopen.grid(row=6, column=15, columnspan=2)
+        tk.Button(self, text="Remove", command=self.listbox_delete).grid(row=4, column=16)
         self.filelist=[]
+        tk.Button(self, text='up', command=lambda: self.reArrangeListbox("up")).grid(row=6, column=17)
+        tk.Button(self, text='dn', command=lambda: self.reArrangeListbox("dn")).grid(row=6, column=17, sticky='s')
         
         tk.Label(self, text="Analysis", relief='ridge').grid(row=7, column=13)
-        tk.Button(self, text="Peak", command=self.peak_finder).grid(row=8, column=14)
-        tk.Button(self, text="+", command=lambda: self.jump_right(0)).grid(row=8, column=17, sticky='e')
-        tk.Button(self, text="-", command=lambda: self.jump_left(0)).grid(row=8, column=18, sticky='w')
-        tk.Button(self, text="+", command=lambda: self.jump_right(1)).grid(row=9, column=17, sticky='e')
-        tk.Button(self, text="-", command=lambda: self.jump_left(1)).grid(row=9, column=18, sticky='w')
-        tk.Button(self, text='Save', command=self.save).grid(row=10, column=17)
-        tk.Button(self, text='Save as', command=self.save_as).grid(row=11, column=17)
-        tk.Label(self, text="Order").grid(row=8, column=15)
+        tk.Button(self, text="Peak", command=self.peak_finder, width=2).grid(row=8, column=15, sticky='w')
+        tk.Button(self, text="+", command=lambda: self.jump_right(0)).grid(row=8, column=17, sticky='w')
+        tk.Button(self, text="-", command=lambda: self.jump_left(0)).grid(row=8, column=17, sticky='e')
+        #tk.Button(self, text="+", command=lambda: self.jump_right(1)).grid(row=9, column=17, sticky='e')
+        #tk.Button(self, text="-", command=lambda: self.jump_left(1)).grid(row=9, column=18, sticky='w')
+        tk.Button(self, text='Save', command=self.save).grid(row=9, column=17,sticky='w')
+        tk.Button(self, text='Save as', command=self.save_as).grid(row=10, column=17,sticky='w')
+        tk.Label(self, text="Order").grid(row=8, column=15, sticky='e')
         self.entryorder=tk.Entry(self, width=5)
         self.entryorder.insert(0,"25")
         self.entryorder.grid(row=8, column=16)
-        tk.Button(self, text="Chi", command=self.chi).grid(row=13, column=14)
+        tk.Button(self, text="Chi", command=self.chi, width=2).grid(row=8, column=14)
        
         self.circvar=tk.IntVar()
         self.circvar.set(1)
         self.squarevar=tk.IntVar()
         self.circ=tk.Checkbutton(self, text="Circular", variable=self.circvar)
-        self.circ.grid(row=13, column=15)
         self.square=tk.Checkbutton(self, text="Square", variable=self.squarevar)
-        self.square.grid(row=13, column=16)
-        tk.Label(self, text="Sample", relief='ridge').grid(row=10, column=13)
-        tk.Label(self, text="Width").grid(row=11, column=14)
-        tk.Label(self, text="Thickness").grid(row=12, column=14)
-        tk.Label(self, text="mm").grid(row=11, column=16, sticky='w')
-        tk.Label(self, text="nm").grid(row=12, column=16, sticky='w')
+        tk.Label(self, text="Sample", relief='ridge').grid(row=9, column=14)
+        tk.Label(self, text="Width [mm]").grid(row=10, column=15,sticky='e')
+        tk.Label(self, text="Thickness [nm]").grid(row=11, column=15,sticky='e')
+        self.circ.grid(row=12, column=15)
+        self.square.grid(row=12, column=16)
 
+        self.entrywidth = tk.Entry(self,width=5)
+        self.entrywidth.insert(0, "4")
+        self.entrywidth.grid(row=10, column=16)
+        self.entrythick = tk.Entry(self,width=5)
+        self.entrythick.insert(0, "50")
+        self.entrythick.grid(row=11, column=16)
+
+        
         tk.Label(self, text="FWHM", relief='ridge').grid(row=14, column=14)
         #self.entrysigma=tk.Entry(self, width=5)
         #self.entrysigma.insert(0,"1000")
@@ -1205,13 +1213,7 @@ class Viewer2(tk.Frame):
         self.entryFWHM.insert(0,"0")
         self.entryFWHM.grid(row=19, column=16)
 
-        self.entrywidth = tk.Entry(self,width=5)
-        self.entrywidth.insert(0, "4")
-        self.entrywidth.grid(row=11, column=15)
-        self.entrythick = tk.Entry(self,width=5)
-        self.entrythick.insert(0, "50")
-        self.entrythick.grid(row=12, column=15)
-
+       
         self.fig = plt.figure(figsize=[10,9])
         self.ax = plt.subplot()
         self.ax.set_xlabel('$f$ [Hz]')
@@ -1238,7 +1240,12 @@ class Viewer2(tk.Frame):
     def save(self):
         t=tk.filedialog.askopenfilename()
         skjal=open(t,'a')
-        nafn=self.filelist[0].split('/')[-1].split('.')[0]+'G'
+        selection=self.listboxopen.curselection()
+        if len(selection) > 0:
+            plotlist = [item for n, item in enumerate(self.filelist) if n in selection]
+        else:
+            plotlist = self.filelist
+        nafn=plotlist[0].split('/')[-1].split('.')[0]+'G'
         
         lina=f'{nafn}\t{self.ampl}\t{self.mean}\t{self.stddev}\t{self.FWHMvalue}\n'
         skjal.write(lina)
@@ -1271,6 +1278,7 @@ class Viewer2(tk.Frame):
             model=self.fitted_model
 
         self.fitted_model = fitter(model, self.freqfit, self.imagfit)
+        print(self.fitted_model)
         self.ampl=self.fitted_model.amplitude.value+self.shift
         self.mean=self.fitted_model.mean.value
         self.stddev=self.fitted_model.stddev.value
@@ -1345,10 +1353,6 @@ class Viewer2(tk.Frame):
         #self.ax.plot(self.freq[self.minima_imag[0,self.indexmin]],self.imag[self.minima_imag[0,self.indexmin]], 'x')
         self.canvas.draw()
 
-    def fit(self):
-        def make_norm_dist(x,mean,sd):
-            return 1.0/(sd*np.sqrt(2*np.pi))*np.exp(-(x-mean)**2/(2*sd**2))
-
     def chi(self):
         self.chii = np.zeros(nfpoints, dtype=np.complex128)
         string=self.filelist[0].rsplit('_')
@@ -1364,10 +1368,8 @@ class Viewer2(tk.Frame):
         wid=float(self.entrywidth.get())*1e-3
         if int(self.circvar.get())==1 and int(self.squarevar.get())==0:
             A=np.pi*(wid/2)**2
-            print('circ')
         elif int(self.squarevar.get())==1 and int(self.circvar.get())==0:
             A=wid**2
-            print('square')
         else:
             print('Choose shape of sample')
 
@@ -1378,7 +1380,7 @@ class Viewer2(tk.Frame):
 
         selection=self.listboxopen.curselection()
         if len(selection) > 0:
-            plotlist = [item for n, item in self.filelist if n in selection]
+            plotlist = [item for n, item in enumerate(self.filelist) if n in selection]
         else:
             plotlist = self.filelist
 
@@ -1391,8 +1393,8 @@ class Viewer2(tk.Frame):
             self.freq=texti['freq'].to_numpy(dtype=np.complex).real
             real=texti['Za'].to_numpy(dtype=np.complex).real
             imag=texti['Za'].to_numpy(dtype=np.complex).imag
-            #real=real-Zzero.real
-            #imag=imag-Zzero.imag
+            real=real-Zzero.real
+            imag=imag-Zzero.imag
             chi=imag*W/(1*mu*V*self.freq*2*np.pi)
             chii=real*W/(1*mu*V*self.freq*2*np.pi)
             self.chii=chi+1j*chii
@@ -1426,34 +1428,34 @@ class Viewer2(tk.Frame):
             self.listboxopen.insert(i, self.filelist[i].split('/')[-1])
 
         #plot the all the .dat files but only the selected item in the self.listbox, which corresponds the the S11 measurement
-    def reArrangeListbox(self):
+    def reArrangeListbox(self, direction):
         items=list(self.listboxopen.curselection())
         if not items:
             print("Nothing")
             return
-        if self.direction == "up":
+        if direction == "up":
             for pos in items:
                 if pos == 0:
                     continue
                 text=self.listboxopen.get(pos)
                 fileName = self.filelist[pos]
                 self.filelist.pop(pos)
-                self.listbox.delete(pos)
+                self.listboxopen.delete(pos)
                 self.filelist.insert(pos-1, fileName)
-                self.listbox.insert(pos-1, text)
+                self.listboxopen.insert(pos-1, text)
             self.listboxopen.selection_clear(0,self.listboxopen.size())
             self.listboxopen.selection_set(tuple([i-1 for i in items]))
 
-        if self.direction == "dn":
+        if direction == "dn":
             for pos in items:
                 if pos ==self.listboxopen.size():
                     continue
                 text=self.listboxopen.get(pos)
                 fileName = self.filelist[pos]
-                self.listbox.delete(pos)
+                self.listboxopen.delete(pos)
                 self.filelist.pop(pos)
                 self.filelist.insert(pos+1, fileName)
-                self.listbox.insert(pos+1, text)
+                self.listboxopen.insert(pos+1, text)
             self.listboxopen.selection_clear(0,self.listboxopen.size())
             self.listboxopen.selection_set(tuple([i+1 for i in items]))
         else:
@@ -1467,7 +1469,7 @@ class Viewer2(tk.Frame):
 
         selection=self.listboxopen.curselection()
         if len(selection) > 0:
-            plotlist = [item for n, item in self.filelist if n in selection]
+            plotlist = [item for n, item in enumerate(self.filelist) if n in selection]
         else:
             plotlist = self.filelist
 
