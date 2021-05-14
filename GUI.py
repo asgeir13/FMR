@@ -803,6 +803,7 @@ class Batch(tk.Frame):
 
         if len(self.values)==2:
             plotlabel=str(np.around(self.angles[self.values[0,:]==self.val[0]]*180/np.pi))
+            print(plotlabel)
         else:
             plotlabel=str(np.around((self.val-FH1[1])/FH1[0]))
 
