@@ -9,9 +9,12 @@ from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationTool
 import pyvisa
 import pandas as pd
 import datetime
-from scipy import signal, optimize 
+from scipy import signal, optimize
 import math
 from astropy import modeling
+from lmfit.models import GaussianModel, LorentzianModel
+import cmath
+from lmfit import Minimizer, report_fit, Parameters
 
     #App class makes the frames and allows easy switching between them, frames are the different windows that pop up and cover the GUI,
     #calibrate, batch and viewer are "independent" frames
@@ -51,7 +54,7 @@ class StartPage(tk.Frame):
         tk.Frame.__init__(self, parent)
        
         tk.Button(self, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=11,padx=5)
-        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=0,column=12)
+        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=12)
         tk.Button(self, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=11, sticky='n', padx=5)
         tk.Button(self, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=12, sticky='n')
         tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=17)
@@ -60,6 +63,7 @@ class StartPage(tk.Frame):
         tk.Button(self, text="Save", command=self.file_save).grid(row=2, column=14, pady=5)
         self.fig = plt.figure(constrained_layout=False, figsize=[10,9])
         tk.Button(self, text="Stop", command=self.stop_run).grid(row=2, column=15)
+        tk.Button(self, text="Calibrate IF", command=self.cal).grid(row=2, column=16)
         gs1 = self.fig.add_gridspec(nrows=1, ncols=2, left=0.1, right=0.95, wspace=0.3)
         self.ax = self.fig.add_subplot(gs1[0,0])
         self.ax1 = self.fig.add_subplot(gs1[0,1])
@@ -108,6 +112,9 @@ class StartPage(tk.Frame):
     
     def stop_run(self):
         self.run=False
+
+    def cal(self):
+       inst.write("HCT")
 
         #saves all the arrays, filedialog.asksaveasfile creates pop up save window
     def file_save(self):
@@ -277,7 +284,7 @@ class Calibrate(tk.Frame):
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
         self.toolbar.grid(row=102, column=0, columnspan=10, sticky='nwe')
         tk.Button(self, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=11,padx=5)
-        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=0,column=12)
+        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=12)
         tk.Button(self, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=11, sticky='n', padx=5)
         tk.Button(self, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=12, sticky='n')
         tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=17, sticky='e')
@@ -291,7 +298,7 @@ class Calibrate(tk.Frame):
 
         tk.Button(self, text="save", command=self.save).grid(row=2,column=15, columnspan=2)
         
-        tk.Label(self, text="Set magnetic field").grid(row=3, column=13)
+        tk.Label(self, text="Set magnetic field",relief='ridge').grid(row=3, column=13)
         
         tk.Label(self, text="Parallel").grid(row=4,column=13)
         self.entrypar = tk.Entry(self,width=5)
@@ -319,13 +326,13 @@ class Calibrate(tk.Frame):
         tk.Button(self, text="Reset", command=self.zerofield).grid(row=7, column=17)
         tk.Button(self, text="Set", command=self.writevolt, width=2).grid(row=7, column=16, sticky='e')
 
-        tk.Label(self, text="Sweep setup").grid(row=9, column=13)
+        tk.Label(self, text="Sweep setup", relief='ridge').grid(row=9, column=13)
 
         tk.Label(self, text="Start").grid(row=10, column=13)
         self.startentry=tk.Entry(self, width=5)
         self.startentry.insert(0, "40")
         self.startentry.grid(row=10, column=14)
-        tk.Label(self, text="MHz").grid(row=9, column=15)
+        tk.Label(self, text="MHz").grid(row=10, column=15)
 
         tk.Label(self, text="Stop").grid(row=11, column=13)
         self.stopentry=tk.Entry(self, width=5)
@@ -343,17 +350,17 @@ class Calibrate(tk.Frame):
         self.pointsbox.insert(0, "401")
         self.pointsbox.grid(row=14, column=14)
         self.pointlist=["51", "101", "201", "401", "801", "1601"]
-        tk.Button(self, text="+", command=lambda: self._up(0), width=1, height=1).grid(row=14, column=15)
-        tk.Button(self, text="-", command=lambda: self._down(0), width=1, height=1).grid(row=14,column=16)
+        tk.Button(self, text="+", command=lambda: self._up(0), width=1, height=1).grid(row=14, column=15,sticky='e')
+        tk.Button(self, text="-", command=lambda: self._down(0), width=1, height=1).grid(row=14,column=15,sticky='w')
 
         tk.Label(self, text="IF BW").grid(row=15, column=13)
         self.IF_list=["10 Hz", "100 Hz", "1 kHz", "10 kHz"]
         self.IF_BW=tk.Entry(self,width=6)
         self.IF_BW.insert(0,"1 kHz")
         self.IF_BW.grid(row=15, column=14)
-        tk.Button(self, text="+", command=lambda: self._up(1), width=1, height=1).grid(row=15, column=15)
-        tk.Button(self, text="-", command=lambda: self._down(1), width=1, height=1).grid(row=15,column=16)
-        tk.Button(self, text="Set values", command=self.set_values).grid(row=9, column=16, columnspan=3)
+        tk.Button(self, text="+", command=lambda: self._up(1), width=1, height=1).grid(row=15, column=15,sticky='e')
+        tk.Button(self, text="-", command=lambda: self._down(1), width=1, height=1).grid(row=15,column=15,sticky='w')
+        tk.Button(self, text="Set values", command=self.set_values).grid(row=11, column=16, columnspan=3)
         tk.Button(self, text="Calibrate IF", command=self.cal).grid(row=10, column=16, columnspan=3)
     
     def _up(self,dex):
@@ -573,7 +580,7 @@ class Batch(tk.Frame):
 
         tk.Frame.__init__(self, parent)
         tk.Button(self, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=11,padx=5)
-        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=0,column=12)
+        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=12)
         tk.Button(self, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=11, sticky='n', padx=5)
         tk.Button(self, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=12, sticky='n')
         tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=18,sticky='e')
@@ -594,7 +601,7 @@ class Batch(tk.Frame):
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
         self.toolbar.grid(row=102, column=0, columnspan=10, sticky='nwe')
 
-        tk.Label(self, text="Sweep magnetic field").grid(row=3,column=13)
+        #tk.Label(self, text="Sweep magnetic field").grid(row=3,column=13)
         tk.Label(self, text="Parallel").grid(row=4, column=14, columnspan=2)
         tk.Label(self, text="Angular").grid(row=4, column=16, columnspan=2, sticky='e')
         tk.Label(self, text="Magnitude").grid(row=5, column=16)
@@ -638,6 +645,7 @@ class Batch(tk.Frame):
         tk.Button(self, text="Scan", command=self.batchscan).grid(row=10, column=13,sticky='e')
         tk.Button(self, text="Save", command=self.file_save).grid(row=9, column=14)
         tk.Button(self, text="Stop", command=self.stop_run).grid(row=10, column=14)
+        tk.Button(self, text="IF calibrate", command=self.cal).grid(row=10,column=16)
         tk.Button(self, text="Clear", command=self.clear).grid(row=9, column=15, columnspan=2, sticky='e')
         tk.Button(self, text="write", command=self.write).grid(row=10, column=15)
 
@@ -667,6 +675,9 @@ class Batch(tk.Frame):
     def _quit(self):
         app.quit()
         app.destroy()
+
+    def cal(self):
+       inst.write("HCT")
 
     def calcvect(self):
         try:
@@ -735,11 +746,15 @@ class Batch(tk.Frame):
                 self.val=self.values[i]
             self.writevolt()
             self.takecal()
+            #if self.type=="ang":
+            #    print("ang")
 
             if i ==0:
                 self.array=np.column_stack((self.S11a, self.Za, self.S11m))
             else:
                 self.array=np.column_stack((self.array, self.S11a, self.Za, self.S11m))
+
+
 
         print('done')
         self.zerofield()
@@ -862,12 +877,12 @@ class Viewer(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         tk.Button(self, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=11,padx=5)
-        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=0,column=12)
+        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=12)
         tk.Button(self, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=11, sticky='n', padx=5)
         tk.Button(self, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=12, sticky='n')
         tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=17, sticky='e')
-        tk.Button(self, text="Single", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=2, column=11, sticky='n')
-        tk.Button(self, text="Pair", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=2, column=12, sticky='n')
+        #tk.Button(self, text="Single", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=2, column=11, sticky='n')
+        #tk.Button(self, text="Pair", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=2, column=12, sticky='n')
 
         tk.Label(self, text="Plotter", relief='ridge').grid(row=3, column=13)
         tk.Button(self, text="Open", command=self.file_open).grid(row=4, column=14, pady=10, padx=5)
@@ -1129,26 +1144,29 @@ class Viewer2(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         tk.Button(self, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=11,padx=5)
-        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=0,column=12)
+        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=12)
         tk.Button(self, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=11, sticky='n', padx=5)
         tk.Button(self, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=12, sticky='n')
         tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=17, sticky='e')
-        tk.Button(self, text="Single", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=2, column=11, sticky='n')
-        tk.Button(self, text="Pair", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=2, column=12, sticky='n')
+        #tk.Button(self, text="Single", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=2, column=11, sticky='n')
+        #tk.Button(self, text="Pair", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=2, column=12, sticky='n')
 
-        tk.Label(self, text="Plotter", relief='ridge').grid(row=3, column=13)
+        
         tk.Button(self, text="Open", command=self.file_open).grid(row=4, column=15, pady=10, padx=5)
         tk.Button(self, text="Plot", command=self.plot, width=3).grid(row=6, column=17,sticky='n')
-        
         tk.Label(self, text="Array").grid(row=5, column=14)
         self.listbox=tk.Listbox(self, width=8, height=1)
         self.listbox.grid(row=5, column=15)
-        self.elements=["Za", "S11a", "S11m", "S11o", "S11l", "S11s", "Edf", "Erf", "Esf"]
+        self.elements=["Za", "angle", "gamma", "EA", "S11a", "S11m", "S11o", "S11l", "S11s", "Edf", "Erf", "Esf"]
         
         for i, ele in enumerate(self.elements):
             self.listbox.insert(i, ele)
+
+        tk.Label(self, text="Custom legends").grid(row=5,column=11)
+        self.custlist=tk.Text(self,width=10,height=5)
+        self.custlist.grid(row=6,column=11,columnspan=2)
         
-        self.listboxopen=tk.Listbox(self, selectmode=tk.EXTENDED, height=6)
+        self.listboxopen=tk.Listbox(self, selectmode=tk.EXTENDED, height=6, width=24)
         self.listboxopen.grid(row=6, column=15, columnspan=2)
         tk.Button(self, text="Remove", command=self.listbox_delete).grid(row=4, column=16)
         self.filelist=[]
@@ -1156,18 +1174,16 @@ class Viewer2(tk.Frame):
         tk.Button(self, text='dn', command=lambda: self.reArrangeListbox("dn")).grid(row=6, column=17, sticky='s')
         
         tk.Label(self, text="Analysis", relief='ridge').grid(row=7, column=13)
-        tk.Button(self, text="Peak", command=self.peak_finder, width=2).grid(row=8, column=15, sticky='w')
-        tk.Button(self, text="+", command=lambda: self.jump_right(0)).grid(row=8, column=17, sticky='w')
-        tk.Button(self, text="-", command=lambda: self.jump_left(0)).grid(row=8, column=17, sticky='e')
-        #tk.Button(self, text="+", command=lambda: self.jump_right(1)).grid(row=9, column=17, sticky='e')
-        #tk.Button(self, text="-", command=lambda: self.jump_left(1)).grid(row=9, column=18, sticky='w')
+        tk.Button(self, text="Peak", command=self.peak_finder, width=3).grid(row=8, column=15)
+        tk.Button(self, text="+", command=lambda: self.jump_right(0)).grid(row=8, column=16, sticky='w')
+        tk.Button(self, text="-", command=lambda: self.jump_left(0)).grid(row=8, column=15, sticky='e')
         tk.Button(self, text='Save', command=self.save).grid(row=9, column=17,sticky='w')
         tk.Button(self, text='Save as', command=self.save_as).grid(row=10, column=17,sticky='w')
-        tk.Label(self, text="Order").grid(row=8, column=15, sticky='e')
+        tk.Label(self, text="Order").grid(row=8, column=16, sticky='e')
         self.entryorder=tk.Entry(self, width=5)
-        self.entryorder.insert(0,"25")
-        self.entryorder.grid(row=8, column=16)
-        tk.Button(self, text="Chi", command=self.chi, width=2).grid(row=8, column=14)
+        self.entryorder.insert(0,"50")
+        self.entryorder.grid(row=8, column=17)
+        tk.Button(self, text="Chi", command=self.chi, width=2).grid(row=8, column=15,sticky='w')        
        
         self.circvar=tk.IntVar()
         self.circvar.set(1)
@@ -1194,27 +1210,105 @@ class Viewer2(tk.Frame):
         #self.entrysigma.grid(row=15, column=14)
         tk.Button(self, text='Determine', command=lambda: self.fwhm(0)).grid(row=15, column=15)
         tk.Button(self, text='Rerun', command=lambda: self.fwhm(1)).grid(row=15,column=16)
-        tk.Label(self, text="Mean").grid(row=17,column=15)
-        self.entryMean=tk.Entry(self,width=8)
-        self.entryMean.insert(0, "0")
-        self.entryMean.grid(row=17,column=16)
+        tk.Label(self, text='Resize').grid(row=14,column=17)
+        self.entrySize=tk.Entry(self,width=8)
+        self.entrySize.insert(0,'0')
+        self.entrySize.grid(row=15,column=17)
+        tk.Label(self, text="Mode").grid(row=17,column=15)
+        self.entryMode=tk.Entry(self,width=11)
+        self.entryMode.insert(0, "0")
+        self.entryMode.grid(row=17,column=16)
         tk.Label(self, text="Amplitude").grid(row=16,column=15)
-        self.entryAmpl=tk.Entry(self,width=8)
+        self.entryAmpl=tk.Entry(self,width=11)
         self.entryAmpl.insert(0, "0")
         self.entryAmpl.grid(row=16,column=16)
-        tk.Label(self, text='Stddev').grid(row=18,column=15)
-        self.entryStd=tk.Entry(self,width=8)
-        self.entryStd.insert(0, "0")
-        self.entryStd.grid(row=18,column=16)
-        tk.Label(self, text='GHz').grid(row=17,column=17, sticky='w')
-        tk.Label(self, text='GHz').grid(row=18,column=17, sticky='w')
-        tk.Label(self, text='GHz').grid(row=19,column=17, sticky='w')
-        tk.Label(self, text='FWHM').grid(row=19, column=15)
-        self.entryFWHM=tk.Entry(self, width=8)
-        self.entryFWHM.insert(0,"0")
-        self.entryFWHM.grid(row=19, column=16)
+        tk.Label(self, text='Sigma').grid(row=18,column=15)
+        self.entrySigma=tk.Entry(self,width=11)
+        self.entrySigma.insert(0, "0")
+        self.entrySigma.grid(row=18,column=16)
+        tk.Label(self, text='Hz').grid(row=17,column=17, sticky='w')
+        tk.Label(self, text='Hz').grid(row=18,column=17, sticky='w')
+##        tk.Label(self, text='Gamma').grid(row=19, column=15)
+##        self.entryGamma=tk.Entry(self, width=8)
+##        self.entryGamma.insert(0,"0")
+##        self.entryGamma.grid(row=19, column=16)
 
-       
+        tk.Label(self, text='Axis limits').grid(row=20,column=15)
+        self.axismin=tk.Entry(self,width=8)
+        self.axismax=tk.Entry(self,width=8)
+        self.axismin.insert(0,'0')
+        self.axismax.insert(0,'0')
+        self.axismin.grid(row=20,column=16)
+        self.axismax.grid(row=20,column=17)
+        tk.Label(self, text='Fit')
+        self.varGauss, self.varLor=tk.IntVar(self), tk.IntVar(self)
+        self.Gauss=tk.Checkbutton(self, text="Gaussian", variable=self.varGauss,command=lambda: self.set_checkfit(0)).grid(row=21,column=15)
+        self.Lorentz=tk.Checkbutton(self, text="Lorentzian", variable=self.varLor,command=lambda: self.set_checkfit(1)).grid(row=21,column=16)
+        self.varGauss.set(1)
+
+        tk.Button(self, text="Fit chi", command=self.fit_chi, width=6).grid(row=23, column=14)
+        tk.Label(self,text='Min').grid(row=23,column=16)
+        tk.Label(self,text='Max').grid(row=23,column=17)
+        tk.Label(self,text="\u03B3").grid(row=24,column=14)
+        self.entryGamma=tk.Entry(self,width=10)
+        self.entryGamma.insert(0,'0')
+        self.entryGamma.grid(row=24, column=15)
+        
+        self.entryGaMin=tk.Entry(self,width=10)
+        self.entryGaMin.insert(0,'0')
+        self.entryGaMin.grid(row=24,column=16)
+        self.entryGaMax=tk.Entry(self,width=10)
+        self.entryGaMax.insert(0,'0')
+        self.entryGaMax.grid(row=24,column=17)
+        
+        tk.Label(self,text="\u03B1").grid(row=25,column=14)
+        self.entryAlpha=tk.Entry(self,width=10)
+        self.entryAlpha.insert(0, '0')
+        self.entryAlpha.grid(row=25,column=15)
+
+        self.entryAlMin=tk.Entry(self,width=10)
+        self.entryAlMin.insert(0,'0')
+        self.entryAlMin.grid(row=25,column=16)
+        self.entryAlMax=tk.Entry(self,width=10)
+        self.entryAlMax.insert(0,'0')
+        self.entryAlMax.grid(row=25,column=17)
+        
+        tk.Label(self,text="K\u0075").grid(row=26,column=14)
+        self.entryKu=tk.Entry(self,width=10)
+        self.entryKu.insert(0,'0')
+        self.entryKu.grid(row=26,column=15)
+
+        self.entryKuMin=tk.Entry(self,width=10)
+        self.entryKuMin.insert(0,'0')
+        self.entryKuMin.grid(row=26,column=16)
+        self.entryKuMax=tk.Entry(self,width=10)
+        self.entryKuMax.insert(0,'0')
+        self.entryKuMax.grid(row=26,column=17)
+        
+        tk.Label(self,text='K\u0073').grid(row=27,column=14)
+        self.entryKs=tk.Entry(self,width=10)
+        self.entryKs.insert(0,'0')
+        self.entryKs.grid(row=27,column=15)
+
+        self.entryKsMin=tk.Entry(self,width=10)
+        self.entryKsMin.insert(0,'0')
+        self.entryKsMin.grid(row=27,column=16)
+        self.entryKsMax=tk.Entry(self,width=10)
+        self.entryKsMax.insert(0,'0')
+        self.entryKsMax.grid(row=27,column=17)
+
+        tk.Label(self,text='M\u0073').grid(row=28,column=14)
+        self.entryMs=tk.Entry(self,width=10)
+        self.entryMs.insert(0,'0')
+        self.entryMs.grid(row=28,column=15)
+
+        self.entryMsMin=tk.Entry(self,width=10)
+        self.entryMsMin.insert(0,'0')
+        self.entryMsMin.grid(row=28,column=16)
+        self.entryMsMax=tk.Entry(self,width=10)
+        self.entryMsMax.insert(0,'0')
+        self.entryMsMax.grid(row=28,column=17)
+        
         self.fig = plt.figure(figsize=[10,9])
         self.ax = plt.subplot()
         self.ax.set_xlabel('$f$ [Hz]')
@@ -1227,11 +1321,24 @@ class Viewer2(tk.Frame):
         self.toolbar=NavigationToolbar2Tk(self.canvas, self.toolbarframe)
         self.toolbar.grid(row=102, column=0, columnspan=10, sticky='nwe')
 
-        self.indexmax=0
+        self.indexmax=4
         self.indexmin=0
         self.peakpos=[0,0]
         self.iterator=0
-    
+
+    def set_checkfit(self,arg):  #function that runs with the source checkbuttons, when current is chosen the voltage checkbutton unchecks and vice versa
+        if arg==0:
+            self.varGauss.set(1)
+            self.varLor.set(0)
+        elif arg==1:
+            self.varGauss.set(0)
+            self.varLor.set(1)
+            
+    def set_checkcurr(self,arg):
+        for i, ele in enumerate(self.checklista):
+            if i!=arg:
+                ele.set(0)
+                
     def save_as(self):
         filename = tk.filedialog.asksaveasfilename(defaultextension="*.txt")
         skjal=open(filename,'w')
@@ -1248,56 +1355,92 @@ class Viewer2(tk.Frame):
             plotlist = self.filelist
         nafn=plotlist[0].split('/')[-1].split('.')[0]+'G'
         
-        lina=f'{nafn}\t{self.ampl}\t{self.mean}\t{self.stddev}\t{self.FWHMvalue}\n'
+        lina=f'{nafn}\t{self.ampl}\t{float(self.maxima)}\t{self.sigma}\t{self.variance}\n'
         skjal.write(lina)
         skjal.close()
 
-
     def fwhm(self, dex):
-        self.iterator +=1
+        
+        freqspan=self.freq[-1]-self.freq[0]
+        peakwith=8e9
+        indexspan=(peakwith/freqspan)*len(self.freq)
+        
+        
         dw=int((self.peaks_imag[0,self.indexmax]-self.peaks_imag[0,self.indexmax-1])/2)
         dw1=int((self.peaks_imag[0,self.indexmax+1]-self.peaks_imag[0,self.indexmax])/2)
         if dw>dw1:
             dw=dw1
-        
-        fitter=modeling.fitting.LevMarLSQFitter()
-        if dex==0:
-            self.freqfit=self.freq[(self.peaks_imag[0,self.indexmax]-dw):(self.peaks_imag[0,self.indexmax]+dw)]
-            self.imagfit=self.imag[(self.peaks_imag[0,self.indexmax]-dw):(self.peaks_imag[0,self.indexmax]+dw)]
-            self.shift=min(self.imagfit)
-            self.imagfit=(-1)*self.shift+self.imagfit
-            topindex=self.peaks_imag[0,self.indexmax]
-            model=modeling.models.Gaussian1D(amplitude=self.imag[topindex], mean=self.freq[topindex], stddev=(self.freqfit[-1]-self.freqfit[0])/2)
+
+        if self.varGauss.get() == 1:
+            model=GaussianModel()
         else:
-            meanvalue=float(self.entryMean.get())*10**9
-            stddevvalue=float(self.entryStd.get())*10**9
-            model=modeling.models.Gaussian1D(amplitude=self.fitted_model.amplitude.value, mean=meanvalue, stddev=stddevvalue)
-            self.freqfit=self.freqfit[0:int(len(self.freqfit)*7/8)]
-            self.imagfit=self.imagfit[0:len(self.freqfit)]
+            model=LorentzianModel()
 
-        if self.iterator>=2:
-            model=self.fitted_model
+        if dex==0:
+            self.freqfit=self.freq[(self.peaks_imag[0,self.indexmax]-int(round(indexspan/2))):(self.peaks_imag[0,self.indexmax]+int(round(indexspan/2)))]
+            self.imagfit=self.imag[(self.peaks_imag[0,self.indexmax]-int(round(indexspan/2))):(self.peaks_imag[0,self.indexmax]+int(round(indexspan/2)))]
+            #self.shift=min(self.imagfit)
+            #print(self.shift)
+            #self.imagfit=(-1)*self.shift+self.imagfit
+            topindex=self.peaks_imag[0,self.indexmax]
+            self.iteratorfwhm=0
+            #self.freqfit=self.freqfit*10**-9
+            #params=model.make_params(amplitude=self.imag[topindex], center=self.freq[topindex]*10**-9, sigma=(self.freqfit[-1]-self.freqfit[0])/2, gamma=1)
+            params=model.make_params(amplitude=self.imag[topindex]*self.freqfit[0], center=self.freq[topindex], sigma=(self.freqfit[-1]-self.freqfit[0])/2)
+        else:
+            if self.entrySize.get() !='0':
+                factor=float(self.entrySize.get())
+            else:
+                factor=7/8
+                
+            self.iteratorfwhm +=1    
+            ampli=float(self.entryAmpl.get())
+            mode=float(self.entryMode.get())
+            sigma=float(self.entrySigma.get())
+            #gamma=float(self.entryGamma.get())
+            params=model.make_params(amplitude=ampli, center=mode, sigma=sigma)
+            #meanvalue=self.mean
+            #stddevvalue=self.entryStd.get(
+            #model=model.make_params(amplitude=self.fitted_model.amplitude.value, mean=meanvalue, stddev=stddevvalue)
+            print('iterator ' + str(self.iteratorfwhm))
+            self.freqfit=self.freq[(self.peaks_imag[0,self.indexmax]-int(round(indexspan*factor**self.iteratorfwhm/2))):(self.peaks_imag[0,self.indexmax]+int(round(indexspan*factor**self.iteratorfwhm/2)))]
+            self.imagfit=self.imag[(self.peaks_imag[0,self.indexmax]-int(round(indexspan*factor**self.iteratorfwhm/2))):(self.peaks_imag[0,self.indexmax]+int(round(indexspan*factor**self.iteratorfwhm/2)))]
+            
+        #if self.iterator>=2:
+            #model=self.fitted_model
+        
 
-        self.fitted_model = fitter(model, self.freqfit, self.imagfit)
-        print(self.fitted_model)
-        self.ampl=self.fitted_model.amplitude.value+self.shift
-        self.mean=self.fitted_model.mean.value
-        self.stddev=self.fitted_model.stddev.value
+        result=model.fit(self.imagfit, params, x=self.freqfit)
+        print(result.fit_report())
+        self.ampl=result.params['amplitude'].value#+self.shift
+        self.mode=result.params['center'].value
+        self.sigma=result.params['sigma'].value
+        #self.gamma=result.params['gamma'].value
+        #self.variance=np.sqrt(self.sigma**2*(1-(2/np.pi)*(self.gamma/(np.sqrt(1+self.gamma**2)))))
+        self.variance=result.params['fwhm'].value
         self.entryAmpl.delete(1,'end')
-        self.entryMean.delete(1,'end')
-        self.entryStd.delete(1,'end')
-        self.entryFWHM.delete(1,'end')
-        self.entryAmpl.insert(0,round(self.ampl,2))
-        self.entryMean.insert(0,round(self.mean*10**-9,2))
-        self.entryStd.insert(0,round(self.stddev*10**-9,2))
-        self.FWHMvalue=2*np.sqrt(2*np.log(2))*self.stddev
-        self.entryFWHM.insert(0,round(self.FWHMvalue*10**-9,2))
+        self.entryMode.delete(1,'end')
+        self.entrySigma.delete(1,'end')
+        #self.entryGamma.delete(1,'end')
+        self.entryAmpl.insert(0,round(self.ampl,4))
+        self.entryMode.insert(0,round(self.mode,4))
+        self.entrySigma.insert(0,round(self.sigma,4))
+        #self.entryGamma.insert(0,round(self.gamma,4))
         self.ax.clear()
         self.peak_finder()
-        freq=self.freq[(self.peaks_imag[0,self.indexmax]-dw):(self.peaks_imag[0,self.indexmax]+dw)]
-        self.ax.plot(freq, self.fitted_model(freq)+self.shift)
+        self.ax.plot(self.freqfit, result.best_fit)#+self.shift)
+        print(self.variance)
+        self.maxima=self.freqfit[np.where(result.best_fit==max(result.best_fit))]
+        if self.axismin.get() !='0':
+            imagfit=self.imagfit#+self.shift
+            self.ax.set_xlim(float(self.axismin.get()),float(self.axismax.get()))
+            self.ax.set_ylim(min(imagfit[np.where((self.freqfit>round(float(self.axismin.get()))) & (self.freqfit<round(float(self.axismax.get()))))]),1.5*max(imagfit[np.where((self.freqfit>round(float(self.axismin.get()))) & (self.freqfit<round(float(self.axismax.get()))))]))
+        self.ax.plot(self.maxima-self.variance/2,(max(result.best_fit)/2),'*',self.maxima+self.variance/2, max(result.best_fit)/2,'*')#tók self.shift
+        self.ax.plot(self.maxima,max(result.best_fit),'o')#+self.shift,'o')
         self.canvas.draw()
 
+
+        #laga peak_finder hægt að skoða hæðsta toppinn, þá væri gagnasöfnunin miklu hraðari
 
     def peak_finder(self):
         self.iterator=0
@@ -1325,11 +1468,14 @@ class Viewer2(tk.Frame):
         self.peaks_real, self.peaks_imag = signal.argrelextrema(self.real,np.greater,order=entryorder), signal.argrelextrema(self.imag,np.greater,order=entryorder)
         self.minima_real, self.minima_imag = signal.argrelextrema(self.real,np.less,order=entryorder), signal.argrelextrema(self.imag,np.less,order=entryorder)
 
-        self.ax.plot(frequency[self.peaks_real],self.real[self.peaks_real], 'o')#, frequency[self.minima_real],self.real[self.minima_real], 'o')
+        #self.ax.plot(frequency[self.peaks_real],self.real[self.peaks_real], 'o')#, frequency[self.minima_real],self.real[self.minima_real], 'o')
         self.ax.plot(frequency[self.peaks_imag],self.imag[self.peaks_imag], 'o')#, frequency[self.minima_imag],self.imag[self.minima_imag], 'o')
-
+        if self.axismin.get() !='0':
+            self.ax.set_xlim(float(self.axismin.get()),float(self.axismax.get()))
+            #self.ax.set_ylim(0,max(self.imagfit[np.where(self.freqfit>float(self.axismin.get()) & self.freqfit<float(self.axismax.get()))]))
+            self.ax.set_ylim(min(self.imag[np.where((self.freq>round(float(self.axismin.get()))) & (self.freq<round(float(self.axismax.get()))))]),1.5*max(self.imag[np.where((self.freq>round(float(self.axismin.get()))) & (self.freq<round(float(self.axismax.get()))))]))
         self.canvas.draw()
-        self.peaks_real=np.array(self.peaks_real)
+        #self.peaks_real=np.array(self.peaks_real)
         self.peaks_imag=np.array(self.peaks_imag)
 
     def jump_right(self,dex):
@@ -1339,7 +1485,7 @@ class Viewer2(tk.Frame):
             self.indexmin=self.indexmin+1
         elif dex==0:
             self.indexmax=self.indexmax+1
-        self.ax.plot(self.freq[self.peaks_imag[0,self.indexmax]],self.imag[self.peaks_imag[0,self.indexmax]], 'x')
+        self.ax.plot(self.freq[self.peaks_imag[0,self.indexmax]],self.imag[self.peaks_imag[0,self.indexmax]], 'x', markersize=12)
         #self.ax.plot(self.freq[self.minima_imag[0,self.indexmin]],self.imag[self.minima_imag[0,self.indexmin]], 'x')
         self.canvas.draw()
   
@@ -1350,7 +1496,7 @@ class Viewer2(tk.Frame):
             self.indexmin=self.indexmin-1
         elif dex==0:
             self.indexmax=self.indexmax-1
-        self.ax.plot(self.freq[self.peaks_imag[0,self.indexmax]],self.imag[self.peaks_imag[0,self.indexmax]], 'x')
+        self.ax.plot(self.freq[self.peaks_imag[0,self.indexmax]],self.imag[self.peaks_imag[0,self.indexmax]], 'x', markersize=12)
         #self.ax.plot(self.freq[self.minima_imag[0,self.indexmin]],self.imag[self.minima_imag[0,self.indexmin]], 'x')
         self.canvas.draw()
 
@@ -1361,8 +1507,8 @@ class Viewer2(tk.Frame):
         string.append('-0.0G.dat')
         nstring='_'
         nstring=nstring.join(string)
-        filezero=pd.read_csv(nstring, index_col=False, comment='#', sep='\t', engine='python')
-        Zzero=filezero['Za'].to_numpy(dtype=np.complex)
+        #filezero=pd.read_csv(nstring, index_col=False, comment='#', sep='\t', engine='python')
+        #Zzero=filezero['Za'].to_numpy(dtype=complex)
 
         self.indicator=1
         #parameters to calc chi, susceptibility of film
@@ -1386,26 +1532,175 @@ class Viewer2(tk.Frame):
             plotlist = self.filelist
 
         self.ax.clear()
-        self.ax.set_xlabel('$f$ [Hz]')
+        self.ax.set_xlabel('$\omega$ [rad/s]')
         self.ax.set_ylabel('$\chi$')
 
         for item in plotlist:
             texti=pd.read_csv(item, index_col=False, comment= "#", sep='\t', engine='python')
-            self.freq=texti['freq'].to_numpy(dtype=np.complex).real
-            real=texti['Za'].to_numpy(dtype=np.complex).real
-            imag=texti['Za'].to_numpy(dtype=np.complex).imag
-            real=real-Zzero.real
-            imag=imag-Zzero.imag
-            chi=imag*W/(1*mu*V*self.freq*2*np.pi)
-            chii=real*W/(1*mu*V*self.freq*2*np.pi)
+            self.freq=texti['freq'].to_numpy(dtype=complex).real*2*np.pi
+            real=texti['Za'].to_numpy(dtype=complex).real
+            imag=texti['Za'].to_numpy(dtype=complex).imag
+            #real=real-Zzero.real
+            #imag=imag-Zzero.imag
+            chi=imag*W/(1*mu*V*self.freq)
+            chii=real*W/(1*mu*V*self.freq)
             self.chii=chi+1j*chii
             re='Re($\chi$) '+item.split('/')[-1].split('.')[0]+'G'
             im='Im($\chi$) '+item.split('/')[-1].split('.')[0]+'G'
             self.ax.plot(self.freq,self.chii.real,label=re)
             self.ax.plot(self.freq,self.chii.imag,label=im)
         self.ax.legend()#legend)
+        if self.axismin.get() !='0':
+            self.ax.set_xlim(float(self.axismin.get()),float(self.axismax.get()))
+            #print(max(chi[np.where((self.freq>round(float(self.axismin.get()))) & (self.freq<round(float(self.axismax.get()))))]))# & self.freq<round(float(self.axismax.get()))))
+            self.ax.set_ylim(min(chi[np.where((self.freq>round(float(self.axismin.get()))) & (self.freq<round(float(self.axismax.get()))))]),1.5*max(chi[np.where((self.freq>round(float(self.axismin.get()))) & (self.freq<round(float(self.axismax.get()))))]))
         self.canvas.draw()
+        filename = "C:/Users/Geiri/Documents/Master/measurements/chi_gogn.txt"
+        intro=f'''#FMR data from {datetime.datetime.now()} freq\chi_r\chi_i'''
+        #fmt=['%.5e', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej']
+        fmt='%.5e'
+        dataout=np.column_stack((self.freq, chi, chii))
+        #np.savetxt(filename, dataout, delimiter='\t', header=intro, fmt=fmt, comments='')
 
+
+    def fit_chi(self):
+        freq=self.freq[200:-1]
+        chii=self.chii.imag[200:-1]
+
+        start=self.mode-2*self.variance
+        end=(self.mode+2*self.variance)
+
+        print(np.where(freq<start))
+        freqlin=freq[np.where(freq<start)]
+        chiilin=chii[np.where(freq<start)]
+        paralin=Parameters()
+        paralin.add('a', value=-1E-6)
+        paralin.add('b',value =-0.001)
+
+        def linfunc(paralin,x,y):
+            a=paralin['a']
+            b=paralin['b']
+            Y=a*x+b
+            resids= (Y-y)**2
+
+            return resids
+        #minne = Minimizer(linfunc, paralin,fcn_args=(freqlin,chiilin))
+        #resultlin = minne.minimize()
+        #report_fit(resultlin)
+        #a=resultlin.params['a'].value
+        #b=resultlin.params['b'].value
+        #tverhluti=self.chii.imag-a*self.freq-b
+        #raunhluti=self.chii.real+a*self.freq+b
+
+        #self.chii=raunhluti+1j*tverhluti
+
+        #freq=np.linspace(0,max(self.freq),num=20000)
+        gamma=float(self.entryGamma.get())
+        gammaMin=float(self.entryGaMin.get())
+        gammaMax=float(self.entryGaMax.get())
+        M=float(self.entryMs.get())
+        MMin=float(self.entryMsMin.get())
+        MMax=float(self.entryMsMax.get())
+        K_u=float(self.entryKu.get())
+        K_uMin=float(self.entryKuMin.get())
+        K_uMax=float(self.entryKuMax.get())
+        K_s=float(self.entryKs.get())
+        K_sMin=float(self.entryKsMin.get())
+        K_sMax=float(self.entryKsMax.get())
+        H=float(self.filelist[self.listboxopen.curselection()[0]].split('_')[-1].split('.')[0])
+        alphavalue=float(self.entryAlpha.get())
+        alphavalueMin=float(self.entryAlMin.get())
+        alphavalueMax=float(self.entryAlMax.get())
+        d=float(self.entrythick.get())*1e-9
+        #Dx=H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M
+        #Dy=2*H+(4*np.pi+4*K_u/(M**2)+4*K_s/(d*M**2))*M
+
+        params=Parameters()
+        if gammaMin!=gammaMax:
+            params.add('gamma',value=gamma,min=gammaMin,max=gammaMax)
+
+        if alphavalueMin!=alphavalueMax:
+            params.add('alpha',value=alphavalue,min=alphavalueMin,max=alphavalueMax)
+                         
+        if K_sMin!=K_sMax:
+            params.add('Ks',value=K_s,min=K_sMin,max=K_sMax)
+            
+        if MMin!=MMax:
+            params.add('M',value=M,min=MMin,max=MMax)
+
+        if K_uMin!=K_uMax:
+            params.add('Ku',value=K_u,min=K_uMin,max=K_uMax)
+
+
+        def fcn2min(params,x,y):
+            if alphavalueMin!=alphavalueMax:
+                alpha=params['alpha']
+
+            if MMin!=MMax:
+                M=params['M']
+
+            if K_sMin!=K_sMax:
+                K_s=params['Ks']
+
+            if K_uMin!=K_uMax:
+                K_u=params['Ku']
+
+            if gammaMin!=gammaMax:
+                gamma=params['gamma']
+                
+            chi_num=gamma**2*M*(H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M)+1j*x*alpha*gamma*M
+            omegarpow2=gamma**2*(H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M)*(H+2*K_u/M)
+            chi_den=omegarpow2*-x**2*(1+alpha**2)+1j*x*gamma*alpha*(2*H+(4*np.pi+4*K_u/(M**2)+4*K_s/(d*M**2))*M)
+            chi=chi_num/chi_den
+            resids=(y.imag-chi.imag)**2+(y.real-chi.real)**2
+            return resids
+
+        tverhluti=self.chii-min(self.chii[np.where((self.freq>start*0.66) & (self.freq<end))].imag)
+        raunhluti=self.chii+min(self.chii[np.where((self.freq>start*0.66) & (self.freq<end))].imag)
+        chitoppur=raunhluti+1j*tverhluti
+        minner = Minimizer(fcn2min, params, fcn_args=(self.freq[np.where((self.freq>start*0.66) & (self.freq<end))],chitoppur[np.where((self.freq>start*0.66) & (self.freq<end))]))
+        result = minner.minimize()
+        report_fit(result)
+        if alphavalueMin!=alphavalueMax:
+            alpha=result.params['alpha'].value
+            self.entryAlpha.delete(0,"end")
+            self.entryAlpha.insert(0,result.params['alpha'].value)
+
+        if MMin!=MMax:
+            M=result.params['M'].value
+            self.entryMs.delete(0,"end")
+            self.entryMs.insert(0,result.params['M'].value)
+
+        if K_sMin!=K_sMax:
+            K_s=result.params['Ks'].value
+            self.entryKs.delete(0,"end")
+            self.entryKs.insert(0,result.params['Ks'].value)
+
+        if K_uMin!=K_uMax:
+            K_u=result.params['Ku'].value
+            self.entryKu.delete(0,"end")
+            self.entryKu.insert(0,result.params['Ku'].value)
+
+        if gammaMin!=gammaMax:
+            gamma=result.params['gamma'].value
+            self.entryGamma.delete(0,"end")
+            self.entryGamma.insert(0,result.params['gamma'].value)
+        
+        freq=self.freq[np.where((self.freq>start*0.66) & (self.freq<end))]
+        chi_num=gamma**2*M*(H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M)+1j*freq*alpha*gamma*M
+        omegarpow2=gamma**2*(H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M)*(H+2*K_u/M)
+        chi_den=omegarpow2-freq**2*(1+alpha**2)+1j*freq*gamma*alpha*(2*H+(4*np.pi+4*K_u/(M**2)+4*K_s/(d*M**2))*M)
+        chi=chi_num/chi_den
+        self.ax.clear()
+        #self.ax.plot(freqlin,chiilin, '*',label='imaglin')
+        self.ax.plot(self.freq, self.chii.real, label='Real Chi')  #+min(self.chii.imag[100:-1])
+        self.ax.plot(self.freq, self.chii.imag, label='Imag Chi')   #-min(self.chii.imag[100:-1])
+        self.ax.plot(freq,chi.real,label="re")
+        self.ax.plot(freq,chi.imag,label="im")
+        #self.ax.plot(omegarpow2,max(chi.imag),'*')
+        self.ax.legend()
+        self.canvas.draw()  
+        
     def _quit(self):
         app.quit()
         app.destroy()
@@ -1481,17 +1776,119 @@ class Viewer2(tk.Frame):
         self.ax.set_ylabel(selected +' [$\Omega$]')
         for item in plotlist:
             texti=pd.read_csv(item, index_col=False, comment= "#", sep='\t', engine='python')
-            x=texti['freq'].to_numpy(dtype=np.complex).real
-            y=texti[selected].to_numpy(dtype=np.complex).real
-            y1=texti[selected].to_numpy(dtype=np.complex).imag
+            if selected == 'angle':
+                self.ax.clear()
+                self.ax.set_xlabel('$\Theta$ [°]')
+                self.ax.set_ylabel('$\omega_r  [rad/s]$')
 
-            #custom_lines = [plt.Line2D([0], [0]), plt.Line2D([0], [0])]
-            self.ax.plot(x,y,x,y1)
-            #self.ax.legend(["Re "+selected, "Im "+selected])
+                field=np.loadtxt(plotlist[0],usecols=[0], dtype='str', skiprows=1, delimiter='\t')
+                resonance=np.loadtxt(plotlist[0], usecols=[2], skiprows=1, delimiter='\t')
+                field=np.array([float(i.split('_')[-1].split('G')[0]) for i in field])
+
+                self.ax.plot(field,resonance,'*')
+            elif selected == 'gamma':
+                field=np.loadtxt(plotlist[0],usecols=[0], dtype='str', skiprows=1, delimiter='\t')
+                resonance=np.loadtxt(plotlist[0], usecols=[2], skiprows=1, delimiter='\t')
+                field=np.array([float(i.split('_')[-1].split('G')[0]) for i in field])
+                x=np.cos(field*np.pi/180)
+
+                def fcn2min(params, x, y):
+                    a=params['a']
+                    b=params['b']
+                    c=params['c']
+
+                    Y=a*x**2+b*x+c
+                    resids = (Y-y)**2
+
+                    return resids
+                params = Parameters()
+                params.add('a',value=-7E18)
+                params.add('b',value=1E19)
+                params.add('c',value=2E18)
+                minner = Minimizer(fcn2min, params, fcn_args = (x**2,resonance**2))
+                result = minner.minimize()
+                report_fit(result)
+                self.ax.clear()
+                self.ax.set_xlabel('cos($ \Theta$ )^2')
+                self.ax.set_ylabel('$\omega ^2 [rad^2/s^2]$')
+                self.ax.plot(x**2, resonance**2,'*')
+                self.ax.plot(x**2,result.params['a']*x**4+result.params['b']*x**2+result.params['c'],'X')
+
+                M=float(self.entryMs.get())
+                H=float(plotlist[0].split('_')[-2].split('G')[0])
+                print(H)
+                K_s=0
+                d=float(self.entrythick.get())*1e-9
+                a=result.params['a']
+                b=result.params['b']
+                c=result.params['c']
+                r=4/(M**2)
+                s=-6*H/M-16*np.pi-8*np.pi*(a+b)/c-2*(H/M)*((a+b)/c)-16*K_s/(d*M**2)-8*K_s*(a+b)/(d*c*M**2)
+                t=(-H**2-4*np.pi*M*H-4*K_s*H/(d*M))*(a+b)/c
+                try:
+                    x=(-s+np.sqrt(s**2-4*r*t))/(2*r)
+                    print(f'x er {x} erg/cm^3')
+                except:
+                    print('x er ekki lausn')
+
+                try:    
+                    x1=(-s-np.sqrt(s**2-4*r*t))/(2*r)
+                    print(f'x1 er {x1} erg/cm^3')
+                except:
+                    print('x1 er ekki lausn')
+
+                self.entryKu.delete(0,"end")
+                self.entryKu.insert(0,abs(x1))
+
+            elif selected == 'EA':
+                field=np.loadtxt(plotlist[0],usecols=[0], dtype='str', skiprows=1, delimiter='\t')
+                resonance=np.loadtxt(plotlist[0], usecols=[2], skiprows=1, delimiter='\t')
+                field=np.array([float(i.split('_')[-1].split('G')[0]) for i in field])
+                H=field
+                M=float(self.entryMs.get())
+                Ku=float(self.entryKu.get())
+                b=4*np.pi*M-4*Ku/M
+                c=(4*np.pi*M-2*Ku/M)*(2*Ku/M)
+                x=H**2+H*b+c
+
+                self.ax.plot(x,resonance**2,'*')
+
+                def fcn2min(params, x, y):
+                    a=params['a']
+                    b=params['b']
+
+                    Y=a*x+b
+                    resids = (Y-y)**2
+
+                    return resids
+
+                params = Parameters()
+                params.add('a',value=1e14)
+                params.add('b',value=1e19)
+
+                minner=Minimizer(fcn2min, params, fcn_args = (x, resonance**2))
+                result = minner.minimize()
+                report_fit(result)
+                self.ax.plot(x, result.params['a']*x+result.params['b'], 'X')
+
+                self.entryGamma.delete(0, 'end')
+                self.entryGamma.insert(0, -np.sqrt(result.params['a']))
+                
+                
+                        
+                
+            else:
+                x=texti['freq'].to_numpy(dtype=complex).real
+                y=texti[selected].to_numpy(dtype=complex).real
+                y1=texti[selected].to_numpy(dtype=complex).imag
+                self.ax.plot(x,y,x,y1)
+            
         legend=[item.split('/')[-1] for item in plotlist]
         self.ax.legend(legend)
+        if self.axismin.get() !='0':
+            self.ax.set_xlim(float(self.axismin.get()),float(self.axismax.get()))
         self.canvas.draw()
-        
+
 
 #use try here so the GUI can be used outside the experimental setup
 #this sets up the connection to the network analyzer and the magnet
@@ -1511,9 +1908,11 @@ try:
     savelist=[]
     nfpoints=10
 except:
+    nfpoints=10
     print('Network analyser is not responding')
 
 # Comedi setup, configuration for read and write
+dev=None
 try:
     import comedi
     subdevr, chanr, rngr, aref = 0, 0, 1, comedi.AREF_GROUND
@@ -1533,11 +1932,9 @@ except:
     print('Magnet not responding')
 
 
-if dev is None:
-    errno = comedi.comedi_errno()
-    print('Error (%d) %s',errno, comedi.comedi_strerror(errno))
-
-
-comedi.comedi_close(dev)
+#if dev is None:
+#    errno = comedi.comedi_errno()
+#    print('Error (%d) %s',errno, comedi.comedi_strerror(errno))
+#comedi.comedi_close(dev)
 app = App()
 app.mainloop()
