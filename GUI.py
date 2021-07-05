@@ -29,8 +29,8 @@ class App(tk.Tk):
         container.grid_rowconfigure(0, weight = 1)
         container.grid_columnconfigure(0, weight = 1)
 
-        #x, y = self.winfo_screenwidth(), self.winfo_screenheight()
-        #self.geometry("%dx%d+%d+%d" % (800,450,x/2-800/2,y/2-450/2))
+        x, y = self.winfo_screenwidth(), self.winfo_screenheight()
+        self.geometry("%dx%d+%d+%d" % (800,450,x/2-800/2,y/2-450/2))
 
         self.frames = {}
         #for-loop to place each page in the container or parent page
@@ -47,6 +47,7 @@ class App(tk.Tk):
     def show_frame(self, cont):
         frame = self.frames[cont]
         frame.tkraise()
+        
 
     #this is the main page
 class StartPage(tk.Frame):
@@ -72,12 +73,12 @@ class StartPage(tk.Frame):
         self.ax.set_ylabel('S11 resistance [$\Omega$]')
         self.ax1.set_ylabel('S11 reactance [$\Omega$]')
         self.canvas = FigureCanvasTkAgg(self.fig, self)
-        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=100, columnspan=10)
+        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=6, columnspan=10, sticky='nswe')
         self.canvas.draw_idle()
         self.toolbarframe=tk.Frame(self)
-        self.toolbarframe.grid(row=101, column=0, columnspan=10, sticky='nwe')
+        self.toolbarframe.grid(row=7, column=0, columnspan=10, sticky='nwe')
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
-        self.toolbar.grid(row=102, column=0, columnspan=10, sticky='nwe')
+        self.toolbar.grid(row=8, column=0, columnspan=10, sticky='nwe')
         
         tk.Label(self, text="Set magnetic field").grid(row=3, column=13)
         tk.Label(self, text="Parallel").grid(row=4,column=13)
@@ -105,6 +106,7 @@ class StartPage(tk.Frame):
 
         tk.Button(self, text="Reset", command=self.zerofield).grid(row=6, column=17)
         tk.Button(self, text="Set", command=self.writevolt, width=1).grid(row=6, column=16, sticky='e')
+
     
     def _quit(self):
         app.quit()
@@ -1154,7 +1156,7 @@ class Viewer2(tk.Frame):
         
         tk.Button(self, text="Open", command=self.file_open).grid(row=4, column=15, pady=10, padx=5)
         tk.Button(self, text="Plot", command=self.plot, width=3).grid(row=6, column=17,sticky='n')
-        tk.Label(self, text="Array").grid(row=5, column=14)
+        tk.Label(self, text="Plot selection").grid(row=5, column=14)
         self.listbox=tk.Listbox(self, width=8, height=1)
         self.listbox.grid(row=5, column=15)
         self.elements=["Za", "angle", "gamma", "EA", "S11a", "S11m", "S11o", "S11l", "S11s", "Edf", "Erf", "Esf"]
@@ -1162,12 +1164,12 @@ class Viewer2(tk.Frame):
         for i, ele in enumerate(self.elements):
             self.listbox.insert(i, ele)
 
-        tk.Label(self, text="Custom legends").grid(row=5,column=11)
-        self.custlist=tk.Text(self,width=10,height=5)
-        self.custlist.grid(row=6,column=11,columnspan=2)
+        #tk.Label(self, text="Custom legends").grid(row=5,column=11)
+        #self.custlist=tk.Text(self,width=10,height=5)
+        #self.custlist.grid(row=6,column=11,columnspan=2)
         
         self.listboxopen=tk.Listbox(self, selectmode=tk.EXTENDED, height=6, width=24)
-        self.listboxopen.grid(row=6, column=15, columnspan=2)
+        self.listboxopen.grid(row=6, column=15, columnspan=2, sticky='s')
         tk.Button(self, text="Remove", command=self.listbox_delete).grid(row=4, column=16)
         self.filelist=[]
         tk.Button(self, text='up', command=lambda: self.reArrangeListbox("up")).grid(row=6, column=17)
@@ -1315,12 +1317,18 @@ class Viewer2(tk.Frame):
         self.ax.set_ylabel('S11')
         
         self.canvas=FigureCanvasTkAgg(self.fig, self)
-        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=100, columnspan=10, sticky='n')
+        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=30, columnspan=10, sticky='nswe')
         self.toolbarframe=tk.Frame(self)
-        self.toolbarframe.grid(row=101, column=0, columnspan=10, sticky='nwe')
+        self.toolbarframe.grid(row=31, column=0, columnspan=10, sticky='nwe')
         self.toolbar=NavigationToolbar2Tk(self.canvas, self.toolbarframe)
-        self.toolbar.grid(row=102, column=0, columnspan=10, sticky='nwe')
+        self.toolbar.grid(row=32, column=0, columnspan=10, sticky='nwe')
+        for i in np.arange(0,33):
+            self.rowconfigure(i, weight=1)
 
+        self.columnconfigure(0,weight=1)
+        self.columnconfigure(1,weight=1)
+
+        
         self.indexmax=4
         self.indexmin=0
         self.peakpos=[0,0]
