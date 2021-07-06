@@ -30,7 +30,7 @@ class App(tk.Tk):
         container.grid_columnconfigure(0, weight = 1)
 
         x, y = self.winfo_screenwidth(), self.winfo_screenheight()
-        self.geometry("%dx%d+%d+%d" % (800,450,x/2-800/2,y/2-450/2))
+        self.geometry("%dx%d+%d+%d" % (1500,900,x/2-1500/2,y/2-900/2))
 
         self.frames = {}
         #for-loop to place each page in the container or parent page
@@ -54,17 +54,15 @@ class StartPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
        
-        tk.Button(self, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=11,padx=5)
-        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=12)
-        tk.Button(self, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=11, sticky='n', padx=5)
-        tk.Button(self, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=12, sticky='n')
-        tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=17)
+        self.buttonframe=tk.Frame(self)
+        self.buttonframe.grid(row=0,column=1,sticky='wn')
+        tk.Button(self.buttonframe, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=0,padx=5)
+        tk.Button(self.buttonframe, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=1)
+        tk.Button(self.buttonframe, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=0, sticky='n', padx=5)
+        tk.Button(self.buttonframe, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=1, sticky='n')
+        tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=7,sticky='ne')
 
-        tk.Button(self, text="Scan", command=self.takecal).grid(row=2, column=13, sticky='e')
-        tk.Button(self, text="Save", command=self.file_save).grid(row=2, column=14, pady=5)
         self.fig = plt.figure(constrained_layout=False, figsize=[10,9])
-        tk.Button(self, text="Stop", command=self.stop_run).grid(row=2, column=15)
-        tk.Button(self, text="Calibrate IF", command=self.cal).grid(row=2, column=16)
         gs1 = self.fig.add_gridspec(nrows=1, ncols=2, left=0.1, right=0.95, wspace=0.3)
         self.ax = self.fig.add_subplot(gs1[0,0])
         self.ax1 = self.fig.add_subplot(gs1[0,1])
@@ -73,39 +71,49 @@ class StartPage(tk.Frame):
         self.ax.set_ylabel('S11 resistance [$\Omega$]')
         self.ax1.set_ylabel('S11 reactance [$\Omega$]')
         self.canvas = FigureCanvasTkAgg(self.fig, self)
-        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=6, columnspan=10, sticky='nswe')
+        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=100,sticky='nswe')
         self.canvas.draw_idle()
         self.toolbarframe=tk.Frame(self)
-        self.toolbarframe.grid(row=7, column=0, columnspan=10, sticky='nwe')
+        self.toolbarframe.grid(row=101, column=0, sticky='nwe')
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
-        self.toolbar.grid(row=8, column=0, columnspan=10, sticky='nwe')
+        self.toolbar.grid(row=102, column=0, sticky='nwe')
         
-        tk.Label(self, text="Set magnetic field").grid(row=3, column=13)
-        tk.Label(self, text="Parallel").grid(row=4,column=13)
-        self.entrypar = tk.Entry(self,width=5)
+        self.scanframe=tk.Frame(self)
+        self.scanframe.grid(row=1,column=2,rowspan=4,columnspan=5,sticky='ne')
+        tk.Button(self.scanframe, text="Scan", command=self.takecal).grid(row=0, column=13, sticky='e')
+        tk.Button(self.scanframe, text="Save", command=self.file_save).grid(row=0, column=14, pady=5)
+        
+        tk.Button(self.scanframe, text="Stop", command=self.stop_run).grid(row=0, column=15)
+        tk.Button(self.scanframe, text="Calibrate IF", command=self.cal).grid(row=0, column=16)
+        tk.Label(self.scanframe, text="Set magnetic field").grid(row=1, column=13)
+        tk.Label(self.scanframe, text="Parallel").grid(row=2,column=13)
+        
+        self.entrypar = tk.Entry(self.scanframe,width=5)
         self.entrypar.insert(0, "0")
-        self.entrypar.grid(row=4, column=14)
-        tk.Label(self, text="G ").grid(row=4, column=15, sticky='w')
+        self.entrypar.grid(row=2, column=14)
+        tk.Label(self.scanframe, text="G ").grid(row=2, column=15, sticky='w')
 
-        tk.Label(self, text="Perpendicular").grid(row=5,column=13)
-        self.entryper = tk.Entry(self,width=5)
+        tk.Label(self.scanframe, text="Perpendicular").grid(row=3,column=13)
+        self.entryper = tk.Entry(self.scanframe,width=5)
         self.entryper.insert(0, "0")
-        self.entryper.grid(row=5, column=14)
-        tk.Label(self, text="G ").grid(row=5, column=15,sticky='w')
+        self.entryper.grid(row=3, column=14)
+        tk.Label(self.scanframe, text="G ").grid(row=3, column=15,sticky='w')
         
-        tk.Label(self, text="Magnitude").grid(row=4, column=16)
-        self.entrymag = tk.Entry(self, width=5)
+        tk.Label(self.scanframe, text="Magnitude").grid(row=2, column=16)
+        self.entrymag = tk.Entry(self.scanframe, width=5)
         self.entrymag.insert(0, "0")
-        self.entrymag.grid(row=4, column=17, sticky='e')
-        tk.Label(self, text="G").grid(row=4, column=18, sticky='w')
-        tk.Label(self, text="Angle").grid(row=5, column=16)
-        self.entryang = tk.Entry(self, width=5)
+        self.entrymag.grid(row=2, column=17, sticky='e')
+        tk.Label(self.scanframe, text="G").grid(row=2, column=18, sticky='w')
+        tk.Label(self.scanframe, text="Angle").grid(row=3, column=16)
+        self.entryang = tk.Entry(self.scanframe, width=5)
         self.entryang.insert(0, "0")
-        self.entryang.grid(row=5, column=17, sticky='e')
-        tk.Label(self, text="°").grid(row=5, column=18, sticky='w')
+        self.entryang.grid(row=3, column=17, sticky='e')
+        tk.Label(self.scanframe, text="°").grid(row=3, column=18, sticky='w')
 
-        tk.Button(self, text="Reset", command=self.zerofield).grid(row=6, column=17)
-        tk.Button(self, text="Set", command=self.writevolt, width=1).grid(row=6, column=16, sticky='e')
+        tk.Button(self.scanframe, text="Reset", command=self.zerofield).grid(row=4, column=17)
+        tk.Button(self.scanframe, text="Set", command=self.writevolt, width=1).grid(row=4, column=16, sticky='e')
+        for i in np.arange(0,7):
+            self.rowconfigure(i, weight=1)
 
     
     def _quit(self):
@@ -285,10 +293,13 @@ class Calibrate(tk.Frame):
         self.toolbarframe.grid(row=101, column=0, columnspan=10, sticky='nwe')
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
         self.toolbar.grid(row=102, column=0, columnspan=10, sticky='nwe')
-        tk.Button(self, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=11,padx=5)
-        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=12)
-        tk.Button(self, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=11, sticky='n', padx=5)
-        tk.Button(self, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=12, sticky='n')
+        
+        self.buttonframe=tk.Frame(self)
+        self.buttonframe.grid(row=0,column=11, columnspan=2,rowspan=2,sticky='wn')
+        tk.Button(self.buttonframe, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=0,padx=5)
+        tk.Button(self.buttonframe, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=1)
+        tk.Button(self.buttonframe, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=0, sticky='n', padx=5)
+        tk.Button(self.buttonframe, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=1, sticky='n')
         tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=17, sticky='e')
 
         tk.Button(self, text="Scan", command=self.takecal).grid(row=2, column=13)
@@ -364,6 +375,8 @@ class Calibrate(tk.Frame):
         tk.Button(self, text="-", command=lambda: self._down(1), width=1, height=1).grid(row=15,column=15,sticky='w')
         tk.Button(self, text="Set values", command=self.set_values).grid(row=11, column=16, columnspan=3)
         tk.Button(self, text="Calibrate IF", command=self.cal).grid(row=10, column=16, columnspan=3)
+        for i in np.arange(0,102):
+            self.rowconfigure(i, weight=1)
     
     def _up(self,dex):
         if dex==1:
@@ -581,10 +594,12 @@ class Batch(tk.Frame):
     def __init__(self, parent, controller):
 
         tk.Frame.__init__(self, parent)
-        tk.Button(self, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=11,padx=5)
-        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=12)
-        tk.Button(self, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=11, sticky='n', padx=5)
-        tk.Button(self, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=12, sticky='n')
+        self.buttonframe=tk.Frame(self)
+        self.buttonframe.grid(row=0,column=11, columnspan=2,rowspan=2,sticky='wn')
+        tk.Button(self.buttonframe, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=0,padx=5)
+        tk.Button(self.buttonframe, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=1)
+        tk.Button(self.buttonframe, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=0, sticky='n', padx=5)
+        tk.Button(self.buttonframe, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=1, sticky='n')
         tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=18,sticky='e')
 
         self.fig = plt.figure(constrained_layout=False, figsize=[10,9])
@@ -650,6 +665,8 @@ class Batch(tk.Frame):
         tk.Button(self, text="IF calibrate", command=self.cal).grid(row=10,column=16)
         tk.Button(self, text="Clear", command=self.clear).grid(row=9, column=15, columnspan=2, sticky='e')
         tk.Button(self, text="write", command=self.write).grid(row=10, column=15)
+        for i in np.arange(0,102):
+            self.rowconfigure(i, weight=1)
 
     def write(self):
         self.val=self.values[0,4]
@@ -1145,28 +1162,34 @@ class Viewer2(tk.Frame):
 
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        tk.Button(self, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=11,padx=5)
-        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=12)
-        tk.Button(self, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=11, sticky='n', padx=5)
-        tk.Button(self, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=12, sticky='n')
+        self.buttonframe=tk.Frame(self)
+        self.buttonframe.grid(row=0,column=11, columnspan=2,rowspan=2,sticky='wn')
+        tk.Button(self.buttonframe, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=0,padx=5)
+        tk.Button(self.buttonframe, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=1)
+        tk.Button(self.buttonframe, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=0, sticky='n', padx=5)
+        tk.Button(self.buttonframe, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=1, sticky='n')
         tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=17, sticky='e')
         #tk.Button(self, text="Single", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=2, column=11, sticky='n')
         #tk.Button(self, text="Pair", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=2, column=12, sticky='n')
 
-        
         tk.Button(self, text="Open", command=self.file_open).grid(row=4, column=15, pady=10, padx=5)
         tk.Button(self, text="Plot", command=self.plot, width=3).grid(row=6, column=17,sticky='n')
-        tk.Label(self, text="Plot selection").grid(row=5, column=14)
+        tk.Label(self, text="Plot selection").grid(row=5, column=16)
         self.listbox=tk.Listbox(self, width=8, height=1)
         self.listbox.grid(row=5, column=15)
-        self.elements=["Za", "angle", "gamma", "EA", "S11a", "S11m", "S11o", "S11l", "S11s", "Edf", "Erf", "Esf"]
+        self.elements=["Za", "angle", "Ku", "EA", "S11a", "S11m", "S11o", "S11l", "S11s", "Edf", "Erf", "Esf"]
         
         for i, ele in enumerate(self.elements):
             self.listbox.insert(i, ele)
 
-        #tk.Label(self, text="Custom legends").grid(row=5,column=11)
-        #self.custlist=tk.Text(self,width=10,height=5)
-        #self.custlist.grid(row=6,column=11,columnspan=2)
+        self.titlevar=tk.IntVar()
+        self.titlevar.set(0)
+        tk.Checkbutton(self, text='Title', variable=self.titlevar, command=self.title).grid(row=5,column=11,sticky='sw')
+        self.custvar=tk.IntVar()
+        self.custvar.set(0)
+        tk.Checkbutton(self, text='Legend', variable=self.custvar, command=self.custom).grid(row=6,column=11,sticky='nw')
+        
+        
         
         self.listboxopen=tk.Listbox(self, selectmode=tk.EXTENDED, height=6, width=24)
         self.listboxopen.grid(row=6, column=15, columnspan=2, sticky='s')
@@ -1175,7 +1198,7 @@ class Viewer2(tk.Frame):
         tk.Button(self, text='up', command=lambda: self.reArrangeListbox("up")).grid(row=6, column=17)
         tk.Button(self, text='dn', command=lambda: self.reArrangeListbox("dn")).grid(row=6, column=17, sticky='s')
         
-        tk.Label(self, text="Analysis", relief='ridge').grid(row=7, column=13)
+        #tk.Label(self, text="Analysis", relief='ridge').grid(row=7, column=13)
         tk.Button(self, text="Peak", command=self.peak_finder, width=3).grid(row=8, column=15)
         tk.Button(self, text="+", command=lambda: self.jump_right(0)).grid(row=8, column=16, sticky='w')
         tk.Button(self, text="-", command=lambda: self.jump_left(0)).grid(row=8, column=15, sticky='e')
@@ -1204,112 +1227,44 @@ class Viewer2(tk.Frame):
         self.entrythick = tk.Entry(self,width=5)
         self.entrythick.insert(0, "50")
         self.entrythick.grid(row=11, column=16)
-
         
         tk.Label(self, text="FWHM", relief='ridge').grid(row=14, column=14)
-        #self.entrysigma=tk.Entry(self, width=5)
-        #self.entrysigma.insert(0,"1000")
-        #self.entrysigma.grid(row=15, column=14)
         tk.Button(self, text='Determine', command=lambda: self.fwhm(0)).grid(row=15, column=15)
         tk.Button(self, text='Rerun', command=lambda: self.fwhm(1)).grid(row=15,column=16)
         tk.Label(self, text='Resize').grid(row=14,column=17)
         self.entrySize=tk.Entry(self,width=8)
         self.entrySize.insert(0,'0')
         self.entrySize.grid(row=15,column=17)
-        tk.Label(self, text="Mode").grid(row=17,column=15)
-        self.entryMode=tk.Entry(self,width=11)
-        self.entryMode.insert(0, "0")
-        self.entryMode.grid(row=17,column=16)
-        tk.Label(self, text="Amplitude").grid(row=16,column=15)
-        self.entryAmpl=tk.Entry(self,width=11)
-        self.entryAmpl.insert(0, "0")
-        self.entryAmpl.grid(row=16,column=16)
-        tk.Label(self, text='Sigma').grid(row=18,column=15)
-        self.entrySigma=tk.Entry(self,width=11)
-        self.entrySigma.insert(0, "0")
-        self.entrySigma.grid(row=18,column=16)
-        tk.Label(self, text='Hz').grid(row=17,column=17, sticky='w')
-        tk.Label(self, text='Hz').grid(row=18,column=17, sticky='w')
-##        tk.Label(self, text='Gamma').grid(row=19, column=15)
-##        self.entryGamma=tk.Entry(self, width=8)
-##        self.entryGamma.insert(0,"0")
-##        self.entryGamma.grid(row=19, column=16)
-
-        tk.Label(self, text='Axis limits').grid(row=20,column=15)
+##        tk.Label(self, text="Mode").grid(row=17,column=15)
+##        self.entryMode=tk.Entry(self,width=11)
+##        self.entryMode.insert(0, "0")
+##        self.entryMode.grid(row=17,column=16)
+##        tk.Label(self, text="Amplitude").grid(row=16,column=15)
+##        self.entryAmpl=tk.Entry(self,width=11)
+##        self.entryAmpl.insert(0, "0")
+##        self.entryAmpl.grid(row=16,column=16)
+##        tk.Label(self, text='Sigma').grid(row=18,column=15)
+##        self.entrySigma=tk.Entry(self,width=11)
+##        self.entrySigma.insert(0, "0")
+##        self.entrySigma.grid(row=18,column=16)
+##        tk.Label(self, text='Hz').grid(row=17,column=17, sticky='w')
+##        tk.Label(self, text='Hz').grid(row=18,column=17, sticky='w')
+        
+        tk.Label(self, text='Axis limits').grid(row=18,column=15)
         self.axismin=tk.Entry(self,width=8)
         self.axismax=tk.Entry(self,width=8)
         self.axismin.insert(0,'0')
         self.axismax.insert(0,'0')
-        self.axismin.grid(row=20,column=16)
-        self.axismax.grid(row=20,column=17)
+        self.axismin.grid(row=18,column=16)
+        self.axismax.grid(row=18,column=17)
         tk.Label(self, text='Fit')
         self.varGauss, self.varLor=tk.IntVar(self), tk.IntVar(self)
-        self.Gauss=tk.Checkbutton(self, text="Gaussian", variable=self.varGauss,command=lambda: self.set_checkfit(0)).grid(row=21,column=15)
-        self.Lorentz=tk.Checkbutton(self, text="Lorentzian", variable=self.varLor,command=lambda: self.set_checkfit(1)).grid(row=21,column=16)
+        self.Gauss=tk.Checkbutton(self, text="Gaussian", variable=self.varGauss,command=lambda: self.set_checkfit(0)).grid(row=17,column=15)
+        self.Lorentz=tk.Checkbutton(self, text="Lorentzian", variable=self.varLor,command=lambda: self.set_checkfit(1)).grid(row=17,column=16)
         self.varGauss.set(1)
 
-        tk.Button(self, text="Fit chi", command=self.fit_chi, width=6).grid(row=23, column=14)
-        tk.Label(self,text='Min').grid(row=23,column=16)
-        tk.Label(self,text='Max').grid(row=23,column=17)
-        tk.Label(self,text="\u03B3").grid(row=24,column=14)
-        self.entryGamma=tk.Entry(self,width=10)
-        self.entryGamma.insert(0,'0')
-        self.entryGamma.grid(row=24, column=15)
-        
-        self.entryGaMin=tk.Entry(self,width=10)
-        self.entryGaMin.insert(0,'0')
-        self.entryGaMin.grid(row=24,column=16)
-        self.entryGaMax=tk.Entry(self,width=10)
-        self.entryGaMax.insert(0,'0')
-        self.entryGaMax.grid(row=24,column=17)
-        
-        tk.Label(self,text="\u03B1").grid(row=25,column=14)
-        self.entryAlpha=tk.Entry(self,width=10)
-        self.entryAlpha.insert(0, '0')
-        self.entryAlpha.grid(row=25,column=15)
-
-        self.entryAlMin=tk.Entry(self,width=10)
-        self.entryAlMin.insert(0,'0')
-        self.entryAlMin.grid(row=25,column=16)
-        self.entryAlMax=tk.Entry(self,width=10)
-        self.entryAlMax.insert(0,'0')
-        self.entryAlMax.grid(row=25,column=17)
-        
-        tk.Label(self,text="K\u0075").grid(row=26,column=14)
-        self.entryKu=tk.Entry(self,width=10)
-        self.entryKu.insert(0,'0')
-        self.entryKu.grid(row=26,column=15)
-
-        self.entryKuMin=tk.Entry(self,width=10)
-        self.entryKuMin.insert(0,'0')
-        self.entryKuMin.grid(row=26,column=16)
-        self.entryKuMax=tk.Entry(self,width=10)
-        self.entryKuMax.insert(0,'0')
-        self.entryKuMax.grid(row=26,column=17)
-        
-        tk.Label(self,text='K\u0073').grid(row=27,column=14)
-        self.entryKs=tk.Entry(self,width=10)
-        self.entryKs.insert(0,'0')
-        self.entryKs.grid(row=27,column=15)
-
-        self.entryKsMin=tk.Entry(self,width=10)
-        self.entryKsMin.insert(0,'0')
-        self.entryKsMin.grid(row=27,column=16)
-        self.entryKsMax=tk.Entry(self,width=10)
-        self.entryKsMax.insert(0,'0')
-        self.entryKsMax.grid(row=27,column=17)
-
-        tk.Label(self,text='M\u0073').grid(row=28,column=14)
-        self.entryMs=tk.Entry(self,width=10)
-        self.entryMs.insert(0,'0')
-        self.entryMs.grid(row=28,column=15)
-
-        self.entryMsMin=tk.Entry(self,width=10)
-        self.entryMsMin.insert(0,'0')
-        self.entryMsMin.grid(row=28,column=16)
-        self.entryMsMax=tk.Entry(self,width=10)
-        self.entryMsMax.insert(0,'0')
-        self.entryMsMax.grid(row=28,column=17)
+        self.fitchivar=tk.IntVar(self)
+        self.fitchi=tk.Checkbutton(self,text="Fit Chi", variable=self.fitchivar,command=self.fitchiframe).grid(row=19,column=14)
         
         self.fig = plt.figure(figsize=[10,9])
         self.ax = plt.subplot()
@@ -1321,12 +1276,14 @@ class Viewer2(tk.Frame):
         self.toolbarframe=tk.Frame(self)
         self.toolbarframe.grid(row=31, column=0, columnspan=10, sticky='nwe')
         self.toolbar=NavigationToolbar2Tk(self.canvas, self.toolbarframe)
-        self.toolbar.grid(row=32, column=0, columnspan=10, sticky='nwe')
+        self.toolbar.grid(row=0, column=0, columnspan=10, sticky='nwe')
         for i in np.arange(0,33):
             self.rowconfigure(i, weight=1)
 
         self.columnconfigure(0,weight=1)
         self.columnconfigure(1,weight=1)
+        self.columnconfigure(2,weight=2)
+        self.columnconfigure(3,weight=3)
 
         
         self.indexmax=4
@@ -1402,11 +1359,11 @@ class Viewer2(tk.Frame):
                 factor=7/8
                 
             self.iteratorfwhm +=1    
-            ampli=float(self.entryAmpl.get())
-            mode=float(self.entryMode.get())
-            sigma=float(self.entrySigma.get())
+##            ampli=float(self.entryAmpl.get())
+##            mode=float(self.entryMode.get())
+##            sigma=float(self.entrySigma.get())
             #gamma=float(self.entryGamma.get())
-            params=model.make_params(amplitude=ampli, center=mode, sigma=sigma)
+            params=model.make_params(amplitude=self.ampl, center=self.mode, sigma=self.sigma)
             #meanvalue=self.mean
             #stddevvalue=self.entryStd.get(
             #model=model.make_params(amplitude=self.fitted_model.amplitude.value, mean=meanvalue, stddev=stddevvalue)
@@ -1426,14 +1383,14 @@ class Viewer2(tk.Frame):
         #self.gamma=result.params['gamma'].value
         #self.variance=np.sqrt(self.sigma**2*(1-(2/np.pi)*(self.gamma/(np.sqrt(1+self.gamma**2)))))
         self.variance=result.params['fwhm'].value
-        self.entryAmpl.delete(1,'end')
-        self.entryMode.delete(1,'end')
-        self.entrySigma.delete(1,'end')
-        #self.entryGamma.delete(1,'end')
-        self.entryAmpl.insert(0,round(self.ampl,4))
-        self.entryMode.insert(0,round(self.mode,4))
-        self.entrySigma.insert(0,round(self.sigma,4))
-        #self.entryGamma.insert(0,round(self.gamma,4))
+##        self.entryAmpl.delete(1,'end')
+##        self.entryMode.delete(1,'end')
+##        self.entrySigma.delete(1,'end')
+##        #self.entryGamma.delete(1,'end')
+##        self.entryAmpl.insert(0,round(self.ampl,4))
+##        self.entryMode.insert(0,round(self.mode,4))
+##        self.entrySigma.insert(0,round(self.sigma,4))
+##        #self.entryGamma.insert(0,round(self.gamma,4))
         self.ax.clear()
         self.peak_finder()
         self.ax.plot(self.freqfit, result.best_fit)#+self.shift)
@@ -1542,6 +1499,8 @@ class Viewer2(tk.Frame):
         self.ax.clear()
         self.ax.set_xlabel('$\omega$ [rad/s]')
         self.ax.set_ylabel('$\chi$')
+        if self.titlevar.get()==1:
+            self.ax.set_title(self.titleentry.get())
 
         for item in plotlist:
             texti=pd.read_csv(item, index_col=False, comment= "#", sep='\t', engine='python')
@@ -1553,11 +1512,21 @@ class Viewer2(tk.Frame):
             chi=imag*W/(1*mu*V*self.freq)
             chii=real*W/(1*mu*V*self.freq)
             self.chii=chi+1j*chii
-            re='Re($\chi$) '+item.split('/')[-1].split('.')[0]+'G'
-            im='Im($\chi$) '+item.split('/')[-1].split('.')[0]+'G'
+            re='Re($\chi$) '+item.split('/')[-1].split('.')[0]
+            im='Im($\chi$) '+item.split('/')[-1].split('.')[0]
             self.ax.plot(self.freq,self.chii.real,label=re)
             self.ax.plot(self.freq,self.chii.imag,label=im)
-        self.ax.legend()#legend)
+            
+            if self.custvar.get()==1:
+                self.legendliststr=[]
+                for i in range(0,self.n):
+                    for n in range(0,1):
+                        self.legendliststr.append(self.legendlist[i].get()+' Re($\chi$)')
+                        self.legendliststr.append(self.legendlist[i].get()+' Im($\chi$)')
+
+                self.ax.legend(self.legendliststr)
+            else:
+                self.ax.legend()#legend)
         if self.axismin.get() !='0':
             self.ax.set_xlim(float(self.axismin.get()),float(self.axismax.get()))
             #print(max(chi[np.where((self.freq>round(float(self.axismin.get()))) & (self.freq<round(float(self.axismax.get()))))]))# & self.freq<round(float(self.axismax.get()))))
@@ -1575,8 +1544,8 @@ class Viewer2(tk.Frame):
         freq=self.freq[200:-1]
         chii=self.chii.imag[200:-1]
 
-        start=self.mode-2*self.variance
-        end=(self.mode+2*self.variance)
+        start=self.mode-self.variance
+        end=(self.mode+self.variance)
 
         print(np.where(freq<start))
         freqlin=freq[np.where(freq<start)]
@@ -1663,10 +1632,11 @@ class Viewer2(tk.Frame):
             resids=(y.imag-chi.imag)**2+(y.real-chi.real)**2
             return resids
 
-        tverhluti=self.chii-min(self.chii[np.where((self.freq>start*0.66) & (self.freq<end))].imag)
-        raunhluti=self.chii+min(self.chii[np.where((self.freq>start*0.66) & (self.freq<end))].imag)
-        chitoppur=raunhluti+1j*tverhluti
-        minner = Minimizer(fcn2min, params, fcn_args=(self.freq[np.where((self.freq>start*0.66) & (self.freq<end))],chitoppur[np.where((self.freq>start*0.66) & (self.freq<end))]))
+        #tverhluti=self.chii-min(self.chii[np.where((self.freq>start*0.66) & (self.freq<end))].imag)
+        #raunhluti=self.chii+min(self.chii[np.where((self.freq>start*0.66) & (self.freq<end))].imag)
+        #chitoppur=raunhluti+1j*tverhluti
+        #minner = Minimizer(fcn2min, params, fcn_args=(self.freq[np.where((self.freq>start*0.66) & (self.freq<end))],chitoppur[np.where((self.freq>start*0.66) & (self.freq<end))]))
+        minner = Minimizer(fcn2min, params, fcn_args=(self.freq[np.where((self.freq>start) & (self.freq<end))], self.chii[np.where((self.freq>start) & (self.freq<end))]))
         result = minner.minimize()
         report_fit(result)
         if alphavalueMin!=alphavalueMax:
@@ -1694,7 +1664,7 @@ class Viewer2(tk.Frame):
             self.entryGamma.delete(0,"end")
             self.entryGamma.insert(0,result.params['gamma'].value)
         
-        freq=self.freq[np.where((self.freq>start*0.66) & (self.freq<end))]
+        freq=self.freq[np.where((self.freq>start) & (self.freq<end))]
         chi_num=gamma**2*M*(H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M)+1j*freq*alpha*gamma*M
         omegarpow2=gamma**2*(H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M)*(H+2*K_u/M)
         chi_den=omegarpow2-freq**2*(1+alpha**2)+1j*freq*gamma*alpha*(2*H+(4*np.pi+4*K_u/(M**2)+4*K_s/(d*M**2))*M)
@@ -1765,6 +1735,111 @@ class Viewer2(tk.Frame):
         else:
             return
 
+    def fitchiframe(self):
+        if self.fitchivar.get()==1:
+            self.rowconfigure(20, weight=5)
+            self.custframe=tk.Frame(self)
+            self.custframe.grid(row=20, column=15, columnspan=3, rowspan=9, sticky='nsew')
+            
+            tk.Button(self.custframe, text="Fit chi", command=self.fit_chi, width=6).grid(row=0, column=1)
+            tk.Label(self.custframe,text='Min').grid(row=0,column=2)
+            tk.Label(self.custframe,text='Max').grid(row=0,column=3)
+            tk.Label(self.custframe,text="\u03B3").grid(row=1,column=0)
+            self.entryGamma=tk.Entry(self.custframe,width=10)
+            self.entryGamma.insert(0,'0')
+            self.entryGamma.grid(row=1, column=1)
+            
+            self.entryGaMin=tk.Entry(self.custframe,width=10)
+            self.entryGaMin.insert(0,'0')
+            self.entryGaMin.grid(row=1,column=2)
+            self.entryGaMax=tk.Entry(self.custframe,width=10)
+            self.entryGaMax.insert(0,'0')
+            self.entryGaMax.grid(row=1,column=3)
+            
+            tk.Label(self.custframe,text="\u03B1").grid(row=2,column=0)
+            self.entryAlpha=tk.Entry(self.custframe,width=10)
+            self.entryAlpha.insert(0, '0')
+            self.entryAlpha.grid(row=2,column=1)
+
+            self.entryAlMin=tk.Entry(self.custframe,width=10)
+            self.entryAlMin.insert(0,'0')
+            self.entryAlMin.grid(row=2,column=2)
+            self.entryAlMax=tk.Entry(self.custframe,width=10)
+            self.entryAlMax.insert(0,'0')
+            self.entryAlMax.grid(row=2,column=3)
+            
+            tk.Label(self.custframe,text="K\u0075").grid(row=3,column=0)
+            self.entryKu=tk.Entry(self.custframe,width=10)
+            self.entryKu.insert(0,'0')
+            self.entryKu.grid(row=3,column=1)
+
+            self.entryKuMin=tk.Entry(self.custframe,width=10)
+            self.entryKuMin.insert(0,'0')
+            self.entryKuMin.grid(row=3,column=2)
+            self.entryKuMax=tk.Entry(self.custframe,width=10)
+            self.entryKuMax.insert(0,'0')
+            self.entryKuMax.grid(row=3,column=3)
+            
+            tk.Label(self.custframe,text='K\u0073').grid(row=4,column=0)
+            self.entryKs=tk.Entry(self.custframe,width=10)
+            self.entryKs.insert(0,'0')
+            self.entryKs.grid(row=4,column=1)
+
+            self.entryKsMin=tk.Entry(self.custframe,width=10)
+            self.entryKsMin.insert(0,'0')
+            self.entryKsMin.grid(row=4,column=2)
+            self.entryKsMax=tk.Entry(self.custframe,width=10)
+            self.entryKsMax.insert(0,'0')
+            self.entryKsMax.grid(row=4,column=3)
+
+            tk.Label(self.custframe,text='M\u0073').grid(row=5,column=0)
+            self.entryMs=tk.Entry(self.custframe,width=10)
+            self.entryMs.insert(0,'0')
+            self.entryMs.grid(row=5,column=1)
+
+            self.entryMsMin=tk.Entry(self.custframe,width=10)
+            self.entryMsMin.insert(0,'0')
+            self.entryMsMin.grid(row=5,column=2)
+            self.entryMsMax=tk.Entry(self.custframe,width=10)
+            self.entryMsMax.insert(0,'0')
+            self.entryMsMax.grid(row=5,column=3)
+
+            for i in np.arange(0,5):
+                self.custframe.rowconfigure(i, weight=1)
+        else:
+            self.custframe.destroy()
+    
+    def title(self):
+        if self.titlevar.get()==1:
+            self.titleentry=tk.Entry(self, width=18)
+            self.titleentry.grid(row=5,column=12,sticky='s')
+        else:
+            self.titleentry.destroy()
+    
+    def custom(self):
+        
+        if self.custvar.get()==1:
+            print('reyna')
+            try:
+                self.n=len(self.filelist)
+            except:
+                self.n=0
+
+            self.customframe=tk.Frame(self)
+            self.customframe.grid(row=6,column=12, columnspan=1,rowspan=5,sticky='nes')
+            self.legendlist=[]
+            for i in range(0, self.n):
+                
+                entr = tk.Entry(self.customframe, width=18)
+                entr.grid(row=i,column=0)
+                entr.insert(0,self.filelist[i].split("/")[-1])
+                self.legendlist.append(entr)
+                
+            print(self.legendlist)
+        else:
+            self.customframe.destroy()
+
+
     def plot(self):
         try:
             selected=self.elements[self.listbox.curselection()[0]]
@@ -1794,7 +1869,7 @@ class Viewer2(tk.Frame):
                 field=np.array([float(i.split('_')[-1].split('G')[0]) for i in field])
 
                 self.ax.plot(field,resonance,'*')
-            elif selected == 'gamma':
+            elif selected == 'Ku':
                 field=np.loadtxt(plotlist[0],usecols=[0], dtype='str', skiprows=1, delimiter='\t')
                 resonance=np.loadtxt(plotlist[0], usecols=[2], skiprows=1, delimiter='\t')
                 field=np.array([float(i.split('_')[-1].split('G')[0]) for i in field])
@@ -1881,10 +1956,7 @@ class Viewer2(tk.Frame):
 
                 self.entryGamma.delete(0, 'end')
                 self.entryGamma.insert(0, -np.sqrt(result.params['a']))
-                
-                
-                        
-                
+
             else:
                 x=texti['freq'].to_numpy(dtype=complex).real
                 y=texti[selected].to_numpy(dtype=complex).real
