@@ -114,6 +114,7 @@ class StartPage(tk.Frame):
         tk.Button(self.scanframe, text="Set", command=self.writevolt, width=1).grid(row=4, column=16, sticky='e')
         for i in np.arange(0,7):
             self.rowconfigure(i, weight=1)
+            self.columnconfigure(i,weight=1)
 
     
     def _quit(self):
@@ -300,7 +301,7 @@ class Calibrate(tk.Frame):
         tk.Button(self.buttonframe, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=1)
         tk.Button(self.buttonframe, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=0, sticky='n', padx=5)
         tk.Button(self.buttonframe, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=1, sticky='n')
-        tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=17, sticky='e')
+        tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=18, sticky='e')
 
         tk.Button(self, text="Scan", command=self.takecal).grid(row=2, column=13)
         self.listbox=tk.Listbox(self, height=2, width=5)
@@ -377,6 +378,9 @@ class Calibrate(tk.Frame):
         tk.Button(self, text="Calibrate IF", command=self.cal).grid(row=10, column=16, columnspan=3)
         for i in np.arange(0,102):
             self.rowconfigure(i, weight=1)
+
+        for i in range(0,18):
+            self.columnconfigure(i,weight=1)
     
     def _up(self,dex):
         if dex==1:
@@ -667,6 +671,9 @@ class Batch(tk.Frame):
         tk.Button(self, text="write", command=self.write).grid(row=10, column=15)
         for i in np.arange(0,102):
             self.rowconfigure(i, weight=1)
+
+        for i in range(0,18):
+            self.columnconfigure(i,weight=1)
 
     def write(self):
         self.val=self.values[0,4]
