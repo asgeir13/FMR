@@ -18,6 +18,7 @@ from lmfit import Minimizer, report_fit, Parameters
 
     #App class makes the frames and allows easy switching between them, frames are the different windows that pop up and cover the GUI,
     #calibrate, batch and viewer are "independent" frames
+
 class App(tk.Tk):
     def __init__(self, *args, **kwargs):
 
@@ -34,7 +35,7 @@ class App(tk.Tk):
 
         self.frames = {}
         #for-loop to place each page in the container or parent page
-        for F in (StartPage, Calibrate, Batch, Viewer, Viewer2):
+        for F in (StartPage, Calibrate, Batch, Viewer2):
 
             frame = F(container, self)
 
@@ -81,7 +82,7 @@ class StartPage(tk.Frame):
         self.toolbar.grid(row=102, column=0, sticky='nwe')
         
         self.scanframe=tk.Frame(self)
-        self.scanframe.grid(row=2,column=4,rowspan=4,columnspan=6,sticky='ne')
+        self.scanframe.grid(row=2,column=4,rowspan=7,columnspan=6,sticky='ne')
         tk.Button(self.scanframe, text="Scan", command=self.takecal).grid(row=4, column=0, sticky='e')
         tk.Button(self.scanframe, text="Save", command=self.file_save).grid(row=4, column=1)
         
@@ -112,11 +113,14 @@ class StartPage(tk.Frame):
         self.entryang.grid(row=2, column=4, sticky='e')
         tk.Label(self.scanframe, text="°").grid(row=2, column=5, sticky='w')
 
-        tk.Button(self.scanframe, text="Reset", command=self.zerofield).grid(row=3, column=3)
-        tk.Button(self.scanframe, text="Set", command=self.writevolt, width=1).grid(row=3, column=2, sticky='e')
+        tk.Button(self.scanframe, text="Reset", command=self.zerofield).grid(row=3, column=2)
+        tk.Button(self.scanframe, text="Set", command=self.writevolt).grid(row=3, column=1)
         for i in np.arange(0,9):
             #self.rowconfigure(i, weight=1)
             self.columnconfigure(i,weight=1)
+
+        for i in range(0,5):
+            self.scanframe.rowconfigure(i,weight=1)
 
     def _quit(self):
         app.quit()
@@ -226,8 +230,15 @@ class StartPage(tk.Frame):
         valu=inst.read("\n")
         valu=valu.rsplit(",")
         valu1=valu[0].rsplit(" ")
+        if len(valu1)==1:
+            valu1=valu[0].rsplit("-")
+            valu1[1]='-'+valu1[1]
+            if len(valu1)==3:
+                valu1[1]=valu1[1]+'-'+valu1[2]
+            
+        valu1=[valu1[1]]
         valu1.extend(valu[1:])
-        valu=[float(n) for n in valu1[1:]]
+        valu=[float(n) for n in valu1]
         real=imag=np.arange(len(freq),dtype=np.float64)
 
         real=np.array(valu[0:-1:2]) #the complex values are given in pairs
@@ -289,7 +300,7 @@ class Calibrate(tk.Frame):
         self.ax.set_ylabel('S11 resistance [$\Omega$]')
         self.ax1.set_ylabel('S11 reactance [$\Omega$]')
         self.canvas = FigureCanvasTkAgg(self.fig, self)
-        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=100, columnspan=10)
+        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=100, columnspan=10, sticky='nswe')
         self.canvas.draw_idle()
         self.toolbarframe=tk.Frame(self)
         self.toolbarframe.grid(row=101, column=0, columnspan=10, sticky='nwe')
@@ -550,13 +561,20 @@ class Calibrate(tk.Frame):
         freq1=freq[0].rsplit(" ")
         freq1.extend(freq[1:])
         freq=[float(n) for n in freq1[1:]]
-
+        
         inst.write("OFD") #requesting the S11 measurements, this returns the real and imag part
         valu=inst.read("\n")
         valu=valu.rsplit(",")
         valu1=valu[0].rsplit(" ")
+        if len(valu1)==1:
+            valu1=valu[0].rsplit("-")
+            valu1[1]='-'+valu1[1]
+            if len(valu1)==3:
+                valu1[1]=valu1[1]+'-'+valu1[2]
+            
+        valu1=[valu1[1]]
         valu1.extend(valu[1:])
-        valu=[float(n) for n in valu1[1:]]
+        valu=[float(n) for n in valu1]
         real=imag=np.arange(len(freq),dtype=np.float64)
 
         real=np.array(valu[0:-1:2]) #the complex values are given in pairs
@@ -629,7 +647,7 @@ class Batch(tk.Frame):
         self.ax.set_ylabel('S11 resistance [$\Omega$]')
         self.ax1.set_ylabel('S11 reactance [$\Omega$]')
         self.canvas = FigureCanvasTkAgg(self.fig, self)
-        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=100, columnspan=10)
+        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=100, columnspan=10, sticky='nswe')
         self.canvas.draw_idle()
         self.toolbarframe=tk.Frame(self)
         self.toolbarframe.grid(row=101, column=0, columnspan=10, sticky='nwe')
@@ -637,29 +655,29 @@ class Batch(tk.Frame):
         self.toolbar.grid(row=102, column=0, columnspan=10, sticky='nwe')
 
         #tk.Label(self, text="Sweep magnetic field").grid(row=3,column=13)
-        tk.Label(self, text="Parallel").grid(row=4, column=14, columnspan=2)
-        tk.Label(self, text="Angular").grid(row=4, column=16, columnspan=2, sticky='e')
+        tk.Label(self, text="Parallel",relief='ridge').grid(row=4, column=14, columnspan=2)
+        tk.Label(self, text="Angular",relief='ridge').grid(row=4, column=16, columnspan=2, sticky='e')
         tk.Label(self, text="Magnitude").grid(row=5, column=16)
         self.mag = tk.Entry(self, width=5)
         self.mag.insert(0, "0")
         self.mag.grid(row=5, column=17)
         tk.Label(self, text="G").grid(row=5, column=18, sticky='w')
 
-        tk.Label(self, text="Start").grid(row=6, column=13, sticky='e')
+        tk.Label(self, text="Start").grid(row=5, column=13, sticky='e')
         self.start = tk.Entry(self,width=5)
         self.start.insert(0, "0")
-        self.start.grid(row=6, column=14)
-        tk.Label(self, text="G").grid(row=6, column=15,sticky='w')
-        tk.Label(self, text="Stop").grid(row=7, column=13, sticky='e')
+        self.start.grid(row=5, column=14)
+        tk.Label(self, text="G").grid(row=5, column=15,sticky='w')
+        tk.Label(self, text="Stop").grid(row=6, column=13, sticky='e')
         self.stop = tk.Entry(self,width=5)
         self.stop.insert(0, "0")
-        self.stop.grid(row=7, column=14)
-        tk.Label(self, text="G").grid(row=7, column=15,sticky='w')
-        tk.Label(self,text="Step").grid(row=8,column=13, sticky='e')
+        self.stop.grid(row=6, column=14)
+        tk.Label(self, text="G").grid(row=6, column=15,sticky='w')
+        tk.Label(self,text="Step").grid(row=7,column=13, sticky='e')
         self.step = tk.Entry(self, width=5)
         self.step.insert(0,"0")
-        self.step.grid(row=8, column=14)
-        tk.Label(self,text="G").grid(row=8, column=15, sticky='w')
+        self.step.grid(row=7, column=14)
+        tk.Label(self,text="G").grid(row=7, column=15, sticky='w')
         tk.Label(self, text="Start").grid(row=6, column=16, sticky='e')
         self.startang = tk.Entry(self, width=5)
         self.startang.insert(0, "0")
@@ -682,16 +700,12 @@ class Batch(tk.Frame):
         tk.Button(self, text="Stop", command=self.stop_run).grid(row=10, column=14)
         tk.Button(self, text="IF calibrate", command=self.cal).grid(row=10,column=16)
         tk.Button(self, text="Clear", command=self.clear).grid(row=9, column=15, columnspan=2, sticky='e')
-        tk.Button(self, text="write", command=self.write).grid(row=10, column=15)
+
         for i in np.arange(0,102):
             self.rowconfigure(i, weight=1)
 
         for i in range(0,18):
             self.columnconfigure(i,weight=1)
-
-    def write(self):
-        self.val=self.values[0,4]
-        print(self.angles[self.values[0,:]==self.val]*180/np.pi)
 
     def clear(self):
         self.start.delete(0,END)
@@ -794,8 +808,6 @@ class Batch(tk.Frame):
             else:
                 self.array=np.column_stack((self.array, self.S11a, self.Za, self.S11m))
 
-
-
         print('done')
         self.zerofield()
       
@@ -821,7 +833,15 @@ class Batch(tk.Frame):
         inst.write("OFD") #requesting the S11 measurements, this returns the real and imag part
         valu=inst.read("\n")
         valu=valu.rsplit(",")
+        print(valu[0])
         valu1=valu[0].rsplit(" ")
+        if len(valu1)==1:
+            valu1=valu[0].rsplit("-")
+            valu1[1]='-'+valu1[1]
+            if len(valu1)==3:
+                valu1[1]=valu1[1]+'-'+valu1[2]
+            
+        valu1=[valu1[1]]
         valu1.extend(valu[1:])
         valu=[float(n) for n in valu1[1:]]
         real=imag=np.arange(len(freq),dtype=np.float64)
@@ -892,8 +912,7 @@ class Batch(tk.Frame):
 
     def file_save(self):
         filename = tk.filedialog.asksaveasfilename(defaultextension="*.txt")
-        intro=f'''#FMR data from {datetime.datetime.now()}, this file includes calibration measurements, correction factor and corrected S11
-freq\tS11o\tS11l\tS11s\tEdf\tErf\tEsf\tS11a\tZa\tS11m'''
+        intro=f'''#FMR data from {datetime.datetime.now()}, this file includes calibration measurements, correction factor and corrected S11 freq\tS11o\tS11l\tS11s\tEdf\tErf\tEsf\tS11a\tZa\tS11m'''
         #fmt=['%.5e', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej']
         fmt='%.5e'
         dataout=np.column_stack((self.freq, S11o, S11l, S11s, Edf, Erf, Esf))
@@ -910,274 +929,7 @@ freq\tS11o\tS11l\tS11s\tEdf\tErf\tEsf\tS11a\tZa\tS11m'''
                 label=str(np.around((n-FH1[1])/FH1[0]))+'G.dat'
                 np.savetxt(filename.rsplit('.')[0]+label, looparray, delimiter='\t', header=intro, fmt=fmt, comments='')
 
-        
-      #Viewer to analyze data
-class Viewer(tk.Frame):
 
-    def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
-        tk.Button(self, text="Measure", command=lambda: controller.show_frame(StartPage), width=8, height=1).grid(row=0,column=11,padx=5)
-        tk.Button(self, text="Viewer", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=0,column=12)
-        tk.Button(self, text="Batch", command=lambda: controller.show_frame(Batch), width=8, height=1).grid(row=1, column=11, sticky='n', padx=5)
-        tk.Button(self, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=12, sticky='n')
-        tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=17, sticky='e')
-        #tk.Button(self, text="Single", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=2, column=11, sticky='n')
-        #tk.Button(self, text="Pair", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=2, column=12, sticky='n')
-
-        tk.Label(self, text="Plotter", relief='ridge').grid(row=3, column=13)
-        tk.Button(self, text="Open", command=self.file_open).grid(row=4, column=14, pady=10, padx=5)
-        tk.Button(self, text="Plot", command=self.plot).grid(row=6, column=13)
-        
-        tk.Label(self, text="Select array to plot: ").grid(row=5, column=13)
-        self.listbox=tk.Listbox(self, width=8, height=1)
-        self.listbox.grid(row=5, column=14, sticky='w')
-        self.elements=["Za", "S11a", "S11m", "S11o", "S11l", "S11s", "Edf", "Erf", "Esf"]
-        
-        for i, ele in enumerate(self.elements):
-            self.listbox.insert(i, ele)
-        
-        self.listboxopen=tk.Listbox(self, selectmode=tk.EXTENDED, height=5)
-        self.listboxopen.grid(row=6, column=14, columnspan=2)
-        tk.Button(self, text="Remove", command=self.listbox_delete).grid(row=4, column=15)
-        self.filelist=[]
-        
-      #  tk.Label(self, text="Analysis", relief='ridge').grid(row=7, column=13)
-      #  tk.Button(self, text="Peak", command=self.peak_finder).grid(row=8, column=14)
-      #  tk.Button(self, text="+", command=lambda: self.jump_right(0)).grid(row=8, column=17, sticky='e')
-      #  tk.Button(self, text="-", command=lambda: self.jump_left(0)).grid(row=8, column=18, sticky='w')
-      #  tk.Button(self, text="+", command=lambda: self.jump_right(1)).grid(row=9, column=17, sticky='e')
-      #  tk.Button(self, text="-", command=lambda: self.jump_left(1)).grid(row=9, column=18, sticky='w')
-      #  #tk.Button(self, text='Save', command=self.saveit).grid(row=10, column=17)
-      #  tk.Label(self, text="Order").grid(row=8, column=15)
-      #  self.entryorder=tk.Entry(self, width=5)
-      #  self.entryorder.insert(0,"20")
-      #  self.entryorder.grid(row=8, column=16)
-        tk.Button(self, text="Chi", command=self.chi).grid(row=13, column=14)
-       
-        self.circvar=tk.IntVar()
-        self.squarevar=tk.IntVar()
-        self.circ=tk.Checkbutton(self, text="Circular", variable=self.circvar)
-        self.circ.grid(row=11, column=17)
-        self.square=tk.Checkbutton(self, text="Square", variable=self.squarevar)
-        self.square.grid(row=12, column=17)
-        tk.Label(self, text="Sample", relief='ridge').grid(row=10, column=13)
-        tk.Label(self, text="Width").grid(row=11, column=14)
-        tk.Label(self, text="Thickness").grid(row=12, column=14)
-        tk.Label(self, text="mm").grid(row=11, column=16, sticky='w')
-        tk.Label(self, text="nm").grid(row=12, column=16, sticky='w')
-
-        self.entrywidth = tk.Entry(self,width=5)
-        self.entrywidth.insert(0, "4")
-        self.entrywidth.grid(row=11, column=15)
-        self.entrythick = tk.Entry(self,width=5)
-        self.entrythick.insert(0, "50")
-        self.entrythick.grid(row=12, column=15)
-
-        self.fig = plt.figure(figsize=[10,9])
-        gs1 = self.fig.add_gridspec(nrows=1, ncols=2, left=0.1, right=0.95, wspace=0.3)
-        self.ax = self.fig.add_subplot(gs1[0,0])
-        self.ax1 = self.fig.add_subplot(gs1[0,1])
-        self.ax.set_xlabel('$f$ [Hz]')
-        self.ax1.set_xlabel('$f$ [Hz]')
-        self.ax.set_ylabel('S11 resistance [$\Omega$]')
-        self.ax1.set_ylabel('S11 reactance [$\Omega$]')
-        
-        self.canvas = FigureCanvasTkAgg(self.fig, self)
-        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=100, columnspan=10, sticky='n')
-        self.toolbarframe=tk.Frame(self)
-        self.toolbarframe.grid(row=101, column=0, columnspan=10, sticky='nwe')
-        self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbarframe)
-        self.toolbar.grid(row=102, column=0, columnspan=10, sticky='nwe')
-
-   # def peak_finder(self):
-   #     texti=pd.read_csv(self.filelist[0], index_col=False, comment= "#", sep='\t', engine='python')
-   #     try:
-   #         selected=self.elements[self.listbox.curselection()[0]]
-   #     except:
-   #         selected='Za'
-
-   #     self.plot() 
-   #     frequency=texti["freq"].to_numpy(dtype=np.complex).real
-   #     real=texti[selected].to_numpy(dtype=np.complex).real
-   #     imag=texti[selected].to_numpy(dtype=np.complex).imag
-   #     entryorder=int(self.entryorder.get())
-   #     self.peaks_real, self.peaks_imag = signal.argrelextrema(real,np.greater,order=entryorder), signal.argrelextrema(imag,np.greater,order=entryorder)
-   #     self.minima_real, self.minima_imag = signal.argrelextrema(real,np.less,order=entryorder), signal.argrelextrema(imag,np.less,order=entryorder)
-
-   #     self.ax.plot(frequency[self.peaks_real],real[self.peaks_real], 'o', frequency[self.minima_real],real[self.minima_real], 'o')
-   #     self.ax.plot(frequency[self.peaks_imag],imag[self.peaks_imag], 'o', frequency[self.minima_imag],imag[self.minima_imag], 'o')
-   #     
-   #     self.canvas.draw()
-
-   #def jump_right(self,dex):
-        #self.ax.clear()
-        #self.peak_finder()
-        #if dex==1:
-        #    self.indexmin=self.indexmin+1
-        #elif dex==0:
-        #    self.indexmax=self.indexmax+1
-        #self.ax.plot(self.freq[self.peaks_real[0,self.indexmax]],self.real[self.peaks_real[0,self.indexmax]], 'x')
-        #self.ax.plot(self.freq[self.minima_imag[0,self.indexmin]],self.imag[self.minima_imag[0,self.indexmin]], 'x')
-        #self.canvas.draw()
-  
-   # def jump_left(self,dex):
-        #self.ax.clear()
-        #self.peak_finder()
-        #if dex==1:
-        #    self.indexmin=self.indexmin-1
-        #elif dex==0:
-        #    self.indexmax=self.indexmax-1
-        #self.ax.plot(self.freq[self.peaks_real[0,self.indexmax]],self.real[self.peaks_real[0,self.indexmax]], 'x')
-        #self.ax.plot(self.freq[self.minima_imag[0,self.indexmin]],self.imag[self.minima_imag[0,self.indexmin]], 'x')
-        #self.canvas.draw()
-
-    def _quit(self):
-        app.quit()
-        app.destroy()
-
-        #creates a list of .dat files to plot
-    def file_open(self):
-
-        t=tk.filedialog.askopenfilenames(initialdir='/home/at/FMR/netgreinir/maelingar/')
-        self.filelist.extend(list(t))
-        self.listboxopen.delete(0,self.listboxopen.size())
-
-        for i in range(len(self.filelist)):
-            self.listboxopen.insert(i, self.filelist[i].split('/')[-1])
-
-        #remove .dat files from the list to plot
-    def listbox_delete(self):
-        END = self.listboxopen.size()
-        self.removelist = self.listboxopen.curselection()
-        self.filelist = [item for n, item in enumerate(self.filelist) if n not in self.removelist]
-        self.listboxopen.delete(0,END)
-        for i in range(len(self.filelist)):
-            self.listboxopen.insert(i, self.filelist[i].split('/')[-1])
-
-        #plot the all the .dat files but only the selected item in the self.listbox, which corresponds the the S11 measurement
-    def reArrangeListbox(self):
-        items=list(self.listboxopen.curselection())
-        if not items:
-            print("Nothing")
-            return
-        if self.direction == "up":
-            for pos in items:
-                if pos == 0:
-                    continue
-                text=self.listboxopen.get(pos)
-                fileName = self.filelist[pos]
-                self.filelist.pop(pos)
-                self.listbox.delete(pos)
-                self.filelist.insert(pos-1, fileName)
-                self.listbox.insert(pos-1, text)
-            self.listboxopen.selection_clear(0,self.listboxopen.size())
-            self.listboxopen.selection_set(tuple([i-1 for i in items]))
-
-        if self.direction == "dn":
-            for pos in items:
-                if pos ==self.listboxopen.size():
-                    continue
-                text=self.listboxopen.get(pos)
-                fileName = self.filelist[pos]
-                self.listbox.delete(pos)
-                self.filelist.pop(pos)
-                self.filelist.insert(pos+1, fileName)
-                self.listbox.insert(pos+1, text)
-            self.listboxopen.selection_clear(0,self.listboxopen.size())
-            self.listboxopen.selection_set(tuple([i+1 for i in items]))
-        else:
-            return
-
-    def plot(self):
-        try:
-            selected=self.elements[self.listbox.curselection()[0]]
-        except:
-            selected='Za'
-
-        selection=self.listboxopen.curselection()
-        if len(selection) > 0:
-            plotlist = [item for n, item in self.filelist if n in selection]
-        else:
-            plotlist = self.filelist
-
-        self.ax.clear()
-        self.ax1.clear()
-        self.ax.set_xlabel('$f$ [Hz]')
-        self.ax.set_ylabel('Re('+selected+') [$\Omega$]')
-        self.ax1.set_xlabel('$f$ [Hz]')
-        self.ax1.set_ylabel('Im('+selected +') [$\Omega$]')
-        for item in plotlist:
-            texti=pd.read_csv(item, index_col=False, comment= "#", sep='\t', engine='python')
-            x=texti['freq'].to_numpy(dtype=np.complex).real
-            y=texti[selected].to_numpy(dtype=np.complex).real
-            y1=texti[selected].to_numpy(dtype=np.complex).imag
-
-            self.ax.plot(x,y)
-            self.ax1.plot(x,y1)
-
-        
-        legend=[item.split('/')[-1] for item in plotlist]
-        self.ax.legend(legend)
-        self.canvas.draw()
-
-
-    def chi(self):
-        self.chi = np.zeros(nfpoints, dtype=np.complex128)
-
-        string=self.filelist[0].rsplit('_')
-        string.pop(-1)
-        string.append('-0.0G.dat')
-        nstring='_'
-        nstring=nstring.join(string)
-        filezero=pd.read_csv(nstring, index_col=False, comment='#', sep='\t', engine='python')
-        Zzero=filezero['Za'].to_numpy(dtype=np.complex)
-
-        #parameters to calc chi, susceptibility of film
-        wid=float(self.entrywidth.get())*1e-3
-        if int(self.circvar.get())==1 and int(self.squarevar.get())==0:
-            A=np.pi*(wid/2)**2
-            print('circ')
-        elif int(self.squarevar.get())==1 and int(self.circvar.get())==0:
-            A=wid**2
-            print('square')
-        else:
-            print('Choose shape of sample')
-
-        mu=np.pi*4e-7
-        t=float(self.entrythick.get())*1e-9
-        V=t*A
-        W=16e-6
-        
-        selection=self.listboxopen.curselection()
-        if len(selection) > 0:
-            plotlist = [item for n, item in self.filelist if n in selection]
-        else:
-            plotlist = self.filelist
-
-        self.ax.clear()
-        self.ax1.clear()
-        self.ax.set_xlabel('$f$ [Hz]')
-        self.ax.set_ylabel('Re($\chi$)')
-        self.ax1.set_xlabel('$f$ [Hz]')
-        self.ax1.set_ylabel('Im($\chi$)')
-
-        for item in plotlist:
-            texti=pd.read_csv(item, index_col=False, comment= "#", sep='\t', engine='python')
-            freq=texti['freq'].to_numpy(dtype=np.complex).real
-            real=texti['Za'].to_numpy(dtype=np.complex).real
-            imag=texti['Za'].to_numpy(dtype=np.complex).imag
-            real=real-Zzero.real
-            imag=imag-Zzero.imag
-            chi=imag*W/(1*mu*V*self.freq*2*np.pi)
-            chii=real*W/(1*mu*V*self.freq*2*np.pi)
-            self.chi=chi+1j*chii
-            self.ax.plot(freq,self.chi.real)
-            self.ax1.plot(freq,self.chi.imag)
-        
-        legend=[item.split('/')[-1].split('.')[0]+'G' for item in plotlist]
-        self.ax.legend(legend)
-        self.ax1.legend(legend)
-        self.canvas.draw()
 
 class Viewer2(tk.Frame):
 
@@ -1192,7 +944,8 @@ class Viewer2(tk.Frame):
         tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=17, sticky='e')
         #tk.Button(self, text="Single", command=lambda: controller.show_frame(Viewer2), width=8, height=1).grid(row=2, column=11, sticky='n')
         #tk.Button(self, text="Pair", command=lambda: controller.show_frame(Viewer), width=8, height=1).grid(row=2, column=12, sticky='n')
-
+        self.buttonframe.columnconfigure(0,weight=1)
+        self.buttonframe.columnconfigure(1,weight=1)
         tk.Button(self, text="Open", command=self.file_open).grid(row=4, column=15, pady=10, padx=5)
         tk.Button(self, text="Plot", command=self.plot, width=3).grid(row=6, column=17,sticky='n')
         tk.Label(self, text="Plot selection").grid(row=5, column=16)
@@ -1210,8 +963,7 @@ class Viewer2(tk.Frame):
         self.custvar.set(0)
         tk.Checkbutton(self, text='Legend', variable=self.custvar, command=self.custom).grid(row=6,column=11,sticky='nw')
         
-        
-        
+       
         self.listboxopen=tk.Listbox(self, selectmode=tk.EXTENDED, height=6, width=24)
         self.listboxopen.grid(row=6, column=15, columnspan=2, sticky='s')
         tk.Button(self, text="Remove", command=self.listbox_delete).grid(row=4, column=16)
@@ -1258,20 +1010,6 @@ class Viewer2(tk.Frame):
         self.entrySize=tk.Entry(self,width=8)
         self.entrySize.insert(0,'0')
         self.entrySize.grid(row=15,column=17)
-##        tk.Label(self, text="Mode").grid(row=17,column=15)
-##        self.entryMode=tk.Entry(self,width=11)
-##        self.entryMode.insert(0, "0")
-##        self.entryMode.grid(row=17,column=16)
-##        tk.Label(self, text="Amplitude").grid(row=16,column=15)
-##        self.entryAmpl=tk.Entry(self,width=11)
-##        self.entryAmpl.insert(0, "0")
-##        self.entryAmpl.grid(row=16,column=16)
-##        tk.Label(self, text='Sigma').grid(row=18,column=15)
-##        self.entrySigma=tk.Entry(self,width=11)
-##        self.entrySigma.insert(0, "0")
-##        self.entrySigma.grid(row=18,column=16)
-##        tk.Label(self, text='Hz').grid(row=17,column=17, sticky='w')
-##        tk.Label(self, text='Hz').grid(row=18,column=17, sticky='w')
         
         tk.Label(self, text='Axis limits').grid(row=18,column=15)
         self.axismin=tk.Entry(self,width=8)
@@ -1287,8 +1025,9 @@ class Viewer2(tk.Frame):
         self.varGauss.set(1)
 
         self.fitchivar=tk.IntVar(self)
-        self.fitchi=tk.Checkbutton(self,text="Fit Chi", variable=self.fitchivar,command=self.fitchiframe).grid(row=19,column=14)
-        
+        self.fitchi=tk.Checkbutton(self,text="Fit Chi", variable=self.fitchivar,command=self.fitchiframe, relief='ridge').grid(row=19,column=14)
+
+        #tk.Button(self, text='Edit', command=self.openpop).grid(row=20,column=15)        
         self.fig = plt.figure(figsize=[10,9])
         self.ax = plt.subplot()
         self.ax.set_xlabel('$f$ [Hz]')
@@ -1313,6 +1052,9 @@ class Viewer2(tk.Frame):
         self.indexmin=0
         self.peakpos=[0,0]
         self.iterator=0
+
+    def openpop(self):
+        popup(self)
 
     def set_checkfit(self,arg):  #function that runs with the source checkbuttons, when current is chosen the voltage checkbutton unchecks and vice versa
         if arg==0:
@@ -1382,20 +1124,12 @@ class Viewer2(tk.Frame):
                 factor=7/8
                 
             self.iteratorfwhm +=1    
-##            ampli=float(self.entryAmpl.get())
-##            mode=float(self.entryMode.get())
-##            sigma=float(self.entrySigma.get())
-            #gamma=float(self.entryGamma.get())
+
             params=model.make_params(amplitude=self.ampl, center=self.mode, sigma=self.sigma)
-            #meanvalue=self.mean
-            #stddevvalue=self.entryStd.get(
-            #model=model.make_params(amplitude=self.fitted_model.amplitude.value, mean=meanvalue, stddev=stddevvalue)
             print('iterator ' + str(self.iteratorfwhm))
             self.freqfit=self.freq[(self.peaks_imag[0,self.indexmax]-int(round(indexspan*factor**self.iteratorfwhm/2))):(self.peaks_imag[0,self.indexmax]+int(round(indexspan*factor**self.iteratorfwhm/2)))]
             self.imagfit=self.imag[(self.peaks_imag[0,self.indexmax]-int(round(indexspan*factor**self.iteratorfwhm/2))):(self.peaks_imag[0,self.indexmax]+int(round(indexspan*factor**self.iteratorfwhm/2)))]
             
-        #if self.iterator>=2:
-            #model=self.fitted_model
         
 
         result=model.fit(self.imagfit, params, x=self.freqfit)
@@ -1403,17 +1137,7 @@ class Viewer2(tk.Frame):
         self.ampl=result.params['amplitude'].value#+self.shift
         self.mode=result.params['center'].value
         self.sigma=result.params['sigma'].value
-        #self.gamma=result.params['gamma'].value
-        #self.variance=np.sqrt(self.sigma**2*(1-(2/np.pi)*(self.gamma/(np.sqrt(1+self.gamma**2)))))
         self.variance=result.params['fwhm'].value
-##        self.entryAmpl.delete(1,'end')
-##        self.entryMode.delete(1,'end')
-##        self.entrySigma.delete(1,'end')
-##        #self.entryGamma.delete(1,'end')
-##        self.entryAmpl.insert(0,round(self.ampl,4))
-##        self.entryMode.insert(0,round(self.mode,4))
-##        self.entrySigma.insert(0,round(self.sigma,4))
-##        #self.entryGamma.insert(0,round(self.gamma,4))
         self.ax.clear()
         self.peak_finder()
         self.ax.plot(self.freqfit, result.best_fit)#+self.shift)
@@ -1562,7 +1286,6 @@ class Viewer2(tk.Frame):
         dataout=np.column_stack((self.freq, chi, chii))
         #np.savetxt(filename, dataout, delimiter='\t', header=intro, fmt=fmt, comments='')
 
-
     def fit_chi(self):
         freq=self.freq[200:-1]
         chii=self.chii.imag[200:-1]
@@ -1707,6 +1430,7 @@ class Viewer2(tk.Frame):
         app.destroy()
 
         #creates a list of .dat files to plot
+
     def file_open(self):
         t=tk.filedialog.askopenfilenames(initialdir='/home/at/FMR/netgreinir/maelingar/')
         self.filelist.extend(list(t))
@@ -1716,6 +1440,7 @@ class Viewer2(tk.Frame):
             self.listboxopen.insert(i, self.filelist[i].split('/')[-1])
 
         #remove .dat files from the list to plot
+
     def listbox_delete(self):
         END = self.listboxopen.size()
         self.removelist = self.listboxopen.curselection()
@@ -1725,6 +1450,7 @@ class Viewer2(tk.Frame):
             self.listboxopen.insert(i, self.filelist[i].split('/')[-1])
 
         #plot the all the .dat files but only the selected item in the self.listbox, which corresponds the the S11 measurement
+
     def reArrangeListbox(self, direction):
         items=list(self.listboxopen.curselection())
         if not items:
@@ -1832,37 +1558,6 @@ class Viewer2(tk.Frame):
         else:
             self.custframe.destroy()
     
-    def title(self):
-        if self.titlevar.get()==1:
-            self.titleentry=tk.Entry(self, width=18)
-            self.titleentry.grid(row=5,column=12,sticky='s')
-        else:
-            self.titleentry.destroy()
-    
-    def custom(self):
-        
-        if self.custvar.get()==1:
-            print('reyna')
-            try:
-                self.n=len(self.filelist)
-            except:
-                self.n=0
-
-            self.customframe=tk.Frame(self)
-            self.customframe.grid(row=6,column=12, columnspan=1,rowspan=5,sticky='nes')
-            self.legendlist=[]
-            for i in range(0, self.n):
-                
-                entr = tk.Entry(self.customframe, width=18)
-                entr.grid(row=i,column=0)
-                entr.insert(0,self.filelist[i].split("/")[-1])
-                self.legendlist.append(entr)
-                
-            print(self.legendlist)
-        else:
-            self.customframe.destroy()
-
-
     def plot(self):
         try:
             selected=self.elements[self.listbox.curselection()[0]]
@@ -1992,6 +1687,88 @@ class Viewer2(tk.Frame):
             self.ax.set_xlim(float(self.axismin.get()),float(self.axismax.get()))
         self.canvas.draw()
 
+    def title(self):
+        if self.titlevar.get()==1:
+            self.titleentry=tk.Entry(self, width=18)
+            self.titleentry.grid(row=5,column=12,sticky='s')
+        else:
+            self.titleentry.destroy()
+    
+    def custom(self):
+        
+        if self.custvar.get()==1:
+            print('reyna')
+            try:
+                self.n=len(self.filelist)
+            except:
+                self.n=0
+
+            self.customframe=tk.Frame(self)
+            self.customframe.grid(row=6,column=12, columnspan=1,rowspan=5,sticky='nes')
+            self.legendlist=[]
+            for i in range(0, self.n):
+                
+                entr = tk.Entry(self.customframe, width=18)
+                entr.grid(row=i,column=0)
+                entr.insert(0,self.filelist[i].split("/")[-1])
+                self.legendlist.append(entr)
+                
+            print(self.legendlist)
+        else:
+            self.customframe.destroy()
+
+# class popup(tk.Toplevel):
+#     def __init__(self, master, **kwargs):
+#         tk.Toplevel.__init__(self, master, **kwargs)
+#         #win=tk.Toplevel.frame()
+#         self.geometry('400x300')
+#         self.focus()
+#         self.lift()
+#         #self.focus_set()
+#         self.grab_set()
+#         self.titlevar=tk.IntVar()
+#         self.titlevar.set(0)
+#         tk.Checkbutton(self, text='Title', variable=self.titlevar, command=self.title).grid(row=0,column=0)
+#         self.custvar=tk.IntVar()
+#         self.custvar.set(0)
+#         tk.Checkbutton(self, text='Legend', variable=self.custvar, command=self.custom).grid(row=1,column=0)
+#         tk.Button(self, text='Apply', command=self.set).grid(row=2,column=0)
+
+
+#     def set(self):
+#         title=self.titleentry.get()
+#         legendlist=self.legendlist
+
+#     def titleedit(self):
+#         if self.titlevar.get()==1:
+#             self.titleentry=tk.Entry(self, width=18)
+#             self.titleentry.grid(row=5,column=12,sticky='s')
+#         else:
+#             self.titleentry.destroy()
+    
+#     def custom(self):
+        
+#         if self.custvar.get()==1:
+#             print('reyna')
+#             try:
+#                 self.n=len(self.filelist)
+#                 print(f'{self.n} self.n náði að prenntast')
+#             except:
+#                 self.n=0
+
+#             self.customframe=tk.Frame(self)
+#             self.customframe.grid(row=23,column=15, columnspan=1,rowspan=5,sticky='nes')
+#             self.legendlist=[]
+#             for i in range(0, self.n):
+                
+#                 entr = tk.Entry(self.customframe, width=18)
+#                 entr.grid(row=i,column=0)
+#                 entr.insert(0,self.filelist[i].split("/")[-1])
+#                 self.legendlist.append(entr)
+#                 self.customframe.rowconfigure(i,weight=1)
+#             print(self.legendlist)
+#         else:
+#             self.customframe.destroy()
 
 #use try here so the GUI can be used outside the experimental setup
 #this sets up the connection to the network analyzer and the magnet
@@ -1999,7 +1776,7 @@ try:
     rm = pyvisa.ResourceManager('@py')
     inst = rm.open_resource('GPIB0::6::INSTR')
     inst.write("S11")
-    inst.write("HC0") #turn of automatic IF calibration
+    #inst.write("HC0") #turn of automatic IF calibration
     start="SRT 40 MHz"
     stop="10000"
     stop="STP 10000 MHz"
@@ -2033,11 +1810,6 @@ try:
     ranger = comedi.comedi_get_range(dev, subdevr, chanr, rngr)
 except:
     print('Magnet not responding')
-
-
-#if dev is None:
-#    errno = comedi.comedi_errno()
-#    print('Error (%d) %s',errno, comedi.comedi_strerror(errno))
-#comedi.comedi_close(dev)
-app = App()
-app.mainloop()
+if __name__=='__main__':
+    app = App()
+    app.mainloop()
