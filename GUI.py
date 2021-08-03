@@ -14,6 +14,9 @@ import math
 from astropy import modeling
 from lmfit.models import GaussianModel, LorentzianModel
 import cmath
+from reportlab.pdfgen.canvas import Canvas
+from PIL import Image
+import codecs
 from lmfit import Minimizer, report_fit, Parameters
 
     #App class makes the frames and allows easy switching between them, frames are the different windows that pop up and cover the GUI,
@@ -63,7 +66,7 @@ class StartPage(tk.Frame):
         tk.Button(self.buttonframe, text="Calibrate", command=lambda: controller.show_frame(Calibrate), width=8, height=1).grid(row=1,column=1, sticky='n')
         self.buttonframe.columnconfigure(0,weight=1)
         self.buttonframe.columnconfigure(1,weight=1)
-        tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=10,sticky='ne')
+        tk.Button(self, text="Exit", command=self._quit).grid(row=0, column=11,sticky='ne')
 
         self.fig = plt.figure(constrained_layout=False, figsize=[10,9])
         gs1 = self.fig.add_gridspec(nrows=1, ncols=2, left=0.1, right=0.95, wspace=0.3)
@@ -115,7 +118,7 @@ class StartPage(tk.Frame):
 
         tk.Button(self.scanframe, text="Reset", command=self.zerofield).grid(row=3, column=2)
         tk.Button(self.scanframe, text="Set", command=self.writevolt).grid(row=3, column=1)
-        for i in np.arange(0,9):
+        for i in np.arange(0,11):
             #self.rowconfigure(i, weight=1)
             self.columnconfigure(i,weight=1)
 
@@ -135,7 +138,7 @@ class StartPage(tk.Frame):
         #saves all the arrays, filedialog.asksaveasfile creates pop up save window
     def file_save(self):
         f = tk.filedialog.asksaveasfile(mode="w", defaultextension="*.txt")
-        intro="#FMR data, this file includes calibration measurements, correction factor and corrected S11\n"
+        intro=f"#FMR data, this file includes calibration measurements, correction factor and corrected S11, Number of measurments: {nave+1}, number of points {nfpoints}, IF BW {IF_BW}\n"
         intro1="freq\tS11a\tS11m\tS11o\tS11l\tS11s\tZa\tEdf\tErf\tEsf\n"
         dataout=np.column_stack((self.freq, self.S11a, self.S11m, S11o, S11l, S11s, self.Za, Edf, Erf, Esf))
         #write the two headers and then writing the array dataout with a double for-loop
@@ -486,7 +489,7 @@ class Calibrate(tk.Frame):
         app.destroy()
 
     def set_values(self):
-        global nave, nfpoints
+        global nave, nfpoints, IF_BW
         start=self.startentry.get()
         stop=self.stopentry.get()
         start="SRT "+start+" MHz"
@@ -494,6 +497,7 @@ class Calibrate(tk.Frame):
         inst.write(start)
         inst.write(stop)
         #set IF_BW value
+        IF_BW=self.IF_BW.get()
         inst.write("IF"+str(int(self.IF_list.index(self.IF_BW.get())+1)))
         #number of data points set, 
         inst.write("NP"+self.pointsbox.get())
@@ -833,7 +837,6 @@ class Batch(tk.Frame):
         inst.write("OFD") #requesting the S11 measurements, this returns the real and imag part
         valu=inst.read("\n")
         valu=valu.rsplit(",")
-        print(valu[0])
         valu1=valu[0].rsplit(" ")
         if len(valu1)==1:
             valu1=valu[0].rsplit("-")
@@ -843,7 +846,7 @@ class Batch(tk.Frame):
             
         valu1=[valu1[1]]
         valu1.extend(valu[1:])
-        valu=[float(n) for n in valu1[1:]]
+        valu=[float(n) for n in valu1]
         real=imag=np.arange(len(freq),dtype=np.float64)
 
         real=np.array(valu[0:-1:2]) #the complex values are given in pairs
@@ -912,11 +915,12 @@ class Batch(tk.Frame):
 
     def file_save(self):
         filename = tk.filedialog.asksaveasfilename(defaultextension="*.txt")
-        intro=f'''#FMR data from {datetime.datetime.now()}, this file includes calibration measurements, correction factor and corrected S11 freq\tS11o\tS11l\tS11s\tEdf\tErf\tEsf\tS11a\tZa\tS11m'''
-        #fmt=['%.5e', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej', '%.5e %+.5ej']
+        intro=f'''#FMR data from {datetime.datetime.now()}, this file includes calibration measurements, correction factor and corrected S11, Number of measurments: {nave+1}, number of points {nfpoints}, IF BW {IF_BW}
+freq\tS11o\tS11l\tS11s\tEdf\tErf\tEsf\tS11a\tZa\tS11m'''
         fmt='%.5e'
         dataout=np.column_stack((self.freq, S11o, S11l, S11s, Edf, Erf, Esf))
-
+        
+        print(self.type)
         if self.type=="ang":
             for i, n in enumerate(self.values[0,:]):
                 looparray=np.column_stack((dataout, self.array[:,i*3:(i*3+3)]))
@@ -956,12 +960,17 @@ class Viewer2(tk.Frame):
         for i, ele in enumerate(self.elements):
             self.listbox.insert(i, ele)
 
+        self.editframe=tk.Frame(self)
+        self.editframe.grid(row=5,column=11,columnspan=2,rowspan=4,sticky='wn')
         self.titlevar=tk.IntVar()
         self.titlevar.set(0)
-        tk.Checkbutton(self, text='Title', variable=self.titlevar, command=self.title).grid(row=5,column=11,sticky='sw')
+        tk.Checkbutton(self.editframe, text='Title', variable=self.titlevar, command=self.title).grid(row=5,column=11,sticky='w')
         self.custvar=tk.IntVar()
         self.custvar.set(0)
-        tk.Checkbutton(self, text='Legend', variable=self.custvar, command=self.custom).grid(row=6,column=11,sticky='nw')
+        tk.Checkbutton(self.editframe, text='Legend', variable=self.custvar, command=self.custom).grid(row=7,column=11,sticky='nw')
+        self.shiftvar=tk.IntVar()
+        self.shiftvar.set(0)
+        tk.Checkbutton(self.editframe, text='Shift', variable=self.shiftvar, command=self.shift).grid(row=6,column=11,sticky='w')
         
        
         self.listboxopen=tk.Listbox(self, selectmode=tk.EXTENDED, height=6, width=24)
@@ -1063,6 +1072,12 @@ class Viewer2(tk.Frame):
         elif arg==1:
             self.varGauss.set(0)
             self.varLor.set(1)
+        elif arg==2:
+            self.varLeastsq.set(1)
+            self.varShgo.set(0)
+        elif arg==3:
+            self.varLeastsq.set(0)
+            self.varShgo.set(1)
             
     def set_checkcurr(self,arg):
         for i, ele in enumerate(self.checklista):
@@ -1096,10 +1111,10 @@ class Viewer2(tk.Frame):
         indexspan=(peakwith/freqspan)*len(self.freq)
         
         
-        dw=int((self.peaks_imag[0,self.indexmax]-self.peaks_imag[0,self.indexmax-1])/2)
-        dw1=int((self.peaks_imag[0,self.indexmax+1]-self.peaks_imag[0,self.indexmax])/2)
-        if dw>dw1:
-            dw=dw1
+        #dw=int((self.peaks_imag[0,self.indexmax]-self.peaks_imag[0,self.indexmax-1])/2)
+        #dw1=int((self.peaks_imag[0,self.indexmax+1]-self.peaks_imag[0,self.indexmax])/2)
+        #if dw>dw1:
+        #    dw=dw1
 
         if self.varGauss.get() == 1:
             model=GaussianModel()
@@ -1235,7 +1250,12 @@ class Viewer2(tk.Frame):
         mu=np.pi*4e-7
         t=float(self.entrythick.get())*1e-9
         V=t*A
-        W=16e-6
+        w=4e-3 #width of loop is 4 mm
+        W=w**2
+        heightloop=1.6e-3 #height of loop is 1.6 mm
+        k=2/np.pi*np.arctan(w/heightloop)
+        psi=0.8
+        k_h=k*psi
 
         selection=self.listboxopen.curselection()
         if len(selection) > 0:
@@ -1249,16 +1269,21 @@ class Viewer2(tk.Frame):
         if self.titlevar.get()==1:
             self.ax.set_title(self.titleentry.get())
 
-        for item in plotlist:
+        for n, item in enumerate(plotlist):
             texti=pd.read_csv(item, index_col=False, comment= "#", sep='\t', engine='python')
             self.freq=texti['freq'].to_numpy(dtype=complex).real*2*np.pi
             real=texti['Za'].to_numpy(dtype=complex).real
             imag=texti['Za'].to_numpy(dtype=complex).imag
             #real=real-Zzero.real
             #imag=imag-Zzero.imag
-            chi=imag*W/(1*mu*V*self.freq)
-            chii=real*W/(1*mu*V*self.freq)
-            self.chii=chi+1j*chii
+            chi=imag*W/(k_h*mu*V*self.freq*4*np.pi)
+            chii=real*W/(k_h*mu*V*self.freq*4*np.pi)    #deili með 4 pi til þess að fá í cgs
+            if self.shiftvar.get()==1:
+                self.chii=chi+n*int(self.shiftentry.get())+1j*(chii+n*int(self.shiftentry.get()))
+                            
+            else:
+                self.chii=chi+1j*chii
+
             re='Re($\chi$) '+item.split('/')[-1].split('.')[0]
             im='Im($\chi$) '+item.split('/')[-1].split('.')[0]
             self.ax.plot(self.freq,self.chii.real,label=re)
@@ -1290,10 +1315,9 @@ class Viewer2(tk.Frame):
         freq=self.freq[200:-1]
         chii=self.chii.imag[200:-1]
 
-        start=self.mode-self.variance
-        end=(self.mode+self.variance)
+        start=self.mode-3*self.variance
+        end=(self.mode+3*self.variance)
 
-        print(np.where(freq<start))
         freqlin=freq[np.where(freq<start)]
         chiilin=chii[np.where(freq<start)]
         paralin=Parameters()
@@ -1330,32 +1354,15 @@ class Viewer2(tk.Frame):
         K_s=float(self.entryKs.get())
         K_sMin=float(self.entryKsMin.get())
         K_sMax=float(self.entryKsMax.get())
-        H=float(self.filelist[self.listboxopen.curselection()[0]].split('_')[-1].split('.')[0])
-        alphavalue=float(self.entryAlpha.get())
+        H=float(self.filelist[0].split('_')[-1].split('.')[0])
+        alpha=float(self.entryAlpha.get())
         alphavalueMin=float(self.entryAlMin.get())
         alphavalueMax=float(self.entryAlMax.get())
         d=float(self.entrythick.get())*1e-9
         #Dx=H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M
         #Dy=2*H+(4*np.pi+4*K_u/(M**2)+4*K_s/(d*M**2))*M
 
-        params=Parameters()
-        if gammaMin!=gammaMax:
-            params.add('gamma',value=gamma,min=gammaMin,max=gammaMax)
-
-        if alphavalueMin!=alphavalueMax:
-            params.add('alpha',value=alphavalue,min=alphavalueMin,max=alphavalueMax)
-                         
-        if K_sMin!=K_sMax:
-            params.add('Ks',value=K_s,min=K_sMin,max=K_sMax)
-            
-        if MMin!=MMax:
-            params.add('M',value=M,min=MMin,max=MMax)
-
-        if K_uMin!=K_uMax:
-            params.add('Ku',value=K_u,min=K_uMin,max=K_uMax)
-
-
-        def fcn2min(params,x,y):
+        def fcn2min(params, x, y):
             if alphavalueMin!=alphavalueMax:
                 alpha=params['alpha']
 
@@ -1370,46 +1377,76 @@ class Viewer2(tk.Frame):
 
             if gammaMin!=gammaMax:
                 gamma=params['gamma']
+            
+            alpha=params['alpha']
+            M=params['M']
+            K_s=params['Ks']
+            K_u=params['Ku']
+            gamma=params['gamma']
                 
             chi_num=gamma**2*M*(H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M)+1j*x*alpha*gamma*M
             omegarpow2=gamma**2*(H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M)*(H+2*K_u/M)
-            chi_den=omegarpow2*-x**2*(1+alpha**2)+1j*x*gamma*alpha*(2*H+(4*np.pi+4*K_u/(M**2)+4*K_s/(d*M**2))*M)
+            chi_den=omegarpow2-x**2*(1+alpha**2)+1j*x*gamma*alpha*(2*H+(4*np.pi+4*K_u/(M**2)+4*K_s/(d*M**2))*M)
             chi=chi_num/chi_den
             resids=(y.imag-chi.imag)**2+(y.real-chi.real)**2
-            return resids
+            #resids=y-chi
+            return resids#.view(float)
+
+        params=Parameters()
+        if gammaMin!=gammaMax:
+            params.add('gamma',value=gamma,min=gammaMin,max=gammaMax)
+
+        if alphavalueMin!=alphavalueMax:
+            params.add('alpha',value=alpha,min=alphavalueMin,max=alphavalueMax)
+                         
+        if K_sMin!=K_sMax:
+            params.add('Ks',value=K_s,min=K_sMin,max=K_sMax)
+            
+        if MMin!=MMax:
+            params.add('M',value=M,min=MMin,max=MMax)
+
+        if K_uMin!=K_uMax:
+            params.add('Ku',value=K_u,min=K_uMin,max=K_uMax)
+
 
         #tverhluti=self.chii-min(self.chii[np.where((self.freq>start*0.66) & (self.freq<end))].imag)
         #raunhluti=self.chii+min(self.chii[np.where((self.freq>start*0.66) & (self.freq<end))].imag)
         #chitoppur=raunhluti+1j*tverhluti
         #minner = Minimizer(fcn2min, params, fcn_args=(self.freq[np.where((self.freq>start*0.66) & (self.freq<end))],chitoppur[np.where((self.freq>start*0.66) & (self.freq<end))]))
         minner = Minimizer(fcn2min, params, fcn_args=(self.freq[np.where((self.freq>start) & (self.freq<end))], self.chii[np.where((self.freq>start) & (self.freq<end))]))
-        result = minner.minimize()
-        report_fit(result)
+        #minner=Minimizer(fcn2min, params, fcn_args=(self.freq,self.chii))
+        if self.varLeastsq.get()==1:
+            metho='leastsq'
+        else:
+            metho='shgo'
+        self.result = minner.minimize(method=metho)
+        report_fit(self.result)
         if alphavalueMin!=alphavalueMax:
-            alpha=result.params['alpha'].value
+            alpha=self.result.params['alpha'].value
             self.entryAlpha.delete(0,"end")
-            self.entryAlpha.insert(0,result.params['alpha'].value)
+            self.entryAlpha.insert(0,self.result.params['alpha'].value)
 
         if MMin!=MMax:
-            M=result.params['M'].value
+            M=self.result.params['M'].value
             self.entryMs.delete(0,"end")
-            self.entryMs.insert(0,result.params['M'].value)
+            self.entryMs.insert(0,self.result.params['M'].value)
 
         if K_sMin!=K_sMax:
-            K_s=result.params['Ks'].value
+            K_s=self.result.params['Ks'].value
             self.entryKs.delete(0,"end")
-            self.entryKs.insert(0,result.params['Ks'].value)
+            self.entryKs.insert(0,self.result.params['Ks'].value)
 
         if K_uMin!=K_uMax:
-            K_u=result.params['Ku'].value
+            K_u=self.result.params['Ku'].value
             self.entryKu.delete(0,"end")
-            self.entryKu.insert(0,result.params['Ku'].value)
+            self.entryKu.insert(0,self.result.params['Ku'].value)
 
         if gammaMin!=gammaMax:
-            gamma=result.params['gamma'].value
+            gamma=self.result.params['gamma'].value
             self.entryGamma.delete(0,"end")
-            self.entryGamma.insert(0,result.params['gamma'].value)
+            self.entryGamma.insert(0,self.result.params['gamma'].value)
         
+
         freq=self.freq[np.where((self.freq>start) & (self.freq<end))]
         chi_num=gamma**2*M*(H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M)+1j*freq*alpha*gamma*M
         omegarpow2=gamma**2*(H+(4*np.pi+2*K_u/(M**2)+4*K_s/(d*M**2))*M)*(H+2*K_u/M)
@@ -1552,8 +1589,14 @@ class Viewer2(tk.Frame):
             self.entryMsMax=tk.Entry(self.custframe,width=10)
             self.entryMsMax.insert(0,'0')
             self.entryMsMax.grid(row=5,column=3)
+            tk.Button(self.custframe, text='Export report', command=self.exportPdf).grid(row=6,column=0)
 
-            for i in np.arange(0,5):
+            self.varLeastsq, self.varShgo=tk.IntVar(self), tk.IntVar(self)
+            self.Leastsq=tk.Checkbutton(self.custframe, text="Leastsq", variable=self.varLeastsq,command=lambda: self.set_checkfit(2)).grid(row=6,column=1)
+            self.Shgo=tk.Checkbutton(self.custframe, text="Shgo", variable=self.varShgo,command=lambda: self.set_checkfit(3)).grid(row=6,column=2)
+            self.varLeastsq.set(1)
+
+            for i in np.arange(0,6):
                 self.custframe.rowconfigure(i, weight=1)
         else:
             self.custframe.destroy()
@@ -1626,6 +1669,10 @@ class Viewer2(tk.Frame):
                 r=4/(M**2)
                 s=-6*H/M-16*np.pi-8*np.pi*(a+b)/c-2*(H/M)*((a+b)/c)-16*K_s/(d*M**2)-8*K_s*(a+b)/(d*c*M**2)
                 t=(-H**2-4*np.pi*M*H-4*K_s*H/(d*M))*(a+b)/c
+                deltaabc=(result.params['a'].stderr+result.params['b'].stderr)/abs(c)+result.params['c'].stderr/abs(c)*abs((a+b)/c)
+                deltas=abs(8*np.pi+2*H/M+8*K_s*H/(d*M))*deltaabc
+                deltat=abs(4*K_s*H/(d*M))*deltaabc
+
                 try:
                     x=(-s+np.sqrt(s**2-4*r*t))/(2*r)
                     print(f'x er {x} erg/cm^3')
@@ -1634,12 +1681,17 @@ class Viewer2(tk.Frame):
 
                 try:    
                     x1=(-s-np.sqrt(s**2-4*r*t))/(2*r)
+                    deltax1=abs(1/2*r+2*s/(4*r*np.sqrt(s**2-4*r*t)))*deltas+abs(1/np.sqrt(s**2-4*r*t))*deltat
                     print(f'x1 er {x1} erg/cm^3')
                 except:
                     print('x1 er ekki lausn')
 
                 self.entryKu.delete(0,"end")
                 self.entryKu.insert(0,abs(x1))
+                self.entryKuMin.delete(0,"end")
+                self.entryKuMax.delete(0,"end")
+                self.entryKuMax.insert(0,abs(x1)+deltax1)
+                self.entryKuMin.insert(0,abs(x1)-deltax1)
 
             elif selected == 'EA':
                 field=np.loadtxt(plotlist[0],usecols=[0], dtype='str', skiprows=1, delimiter='\t')
@@ -1674,6 +1726,10 @@ class Viewer2(tk.Frame):
 
                 self.entryGamma.delete(0, 'end')
                 self.entryGamma.insert(0, -np.sqrt(result.params['a']))
+                self.entryGaMax.delete(0, "end")
+                self.entryGaMin.delete(0,"end")
+                self.entryGaMax.insert(0,-np.sqrt(result.params['a']+result.params['a'].stderr/(2*abs(np.sqrt(result.params['a'])))))
+                self.entryGaMin.insert(0,-np.sqrt(result.params['a']-result.params['a'].stderr/(2*abs(np.sqrt(result.params['a'])))))
 
             else:
                 x=texti['freq'].to_numpy(dtype=complex).real
@@ -1687,12 +1743,34 @@ class Viewer2(tk.Frame):
             self.ax.set_xlim(float(self.axismin.get()),float(self.axismax.get()))
         self.canvas.draw()
 
+    def exportPdf(self):
+        imagefilename=tk.filedialog.askopenfilename()
+        canvas=Canvas(imagefilename.split(".png")[0]+'.pdf')
+        #canvas.drawString(72, 72, codecs.encode(self.reportstring))
+        print(self.result.params['alpha'].value)
+        canvas.drawString(72,130, 'Parameter   Value   Stderr')
+        canvas.drawString(20, 825, f'{datetime.datetime.now()}')
+        i=0
+        for name, param in self.result.params.items():
+            canvas.drawString(72, 120-i, f'{name}    {self.result.params[name].value}    {self.result.params[name].stderr}')
+            i+=15
+        
+        canvas.drawImage(imagefilename,0,135,width=600,preserveAspectRatio=True)
+        canvas.save()
+
     def title(self):
         if self.titlevar.get()==1:
-            self.titleentry=tk.Entry(self, width=18)
+            self.titleentry=tk.Entry(self.editframe, width=18)
             self.titleentry.grid(row=5,column=12,sticky='s')
         else:
             self.titleentry.destroy()
+
+    def shift(self):
+        if self.shiftvar.get()==1:
+            self.shiftentry=tk.Entry(self.editframe, width=5)
+            self.shiftentry.grid(row=6,column=12)
+        else:
+            self.shiftentry.destroy()
     
     def custom(self):
         
@@ -1703,8 +1781,8 @@ class Viewer2(tk.Frame):
             except:
                 self.n=0
 
-            self.customframe=tk.Frame(self)
-            self.customframe.grid(row=6,column=12, columnspan=1,rowspan=5,sticky='nes')
+            self.customframe=tk.Frame(self.editframe)
+            self.customframe.grid(row=7,column=12, columnspan=1,rowspan=5,sticky='nes')
             self.legendlist=[]
             for i in range(0, self.n):
                 
