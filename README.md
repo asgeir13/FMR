@@ -12,3 +12,5 @@ drstein_cal_Ls.py er notaður til að kvarða litlu helmholtz spóluna, segulsvi
 spenna_magnari.py er notaður til þess að stilla segulsvið stóru spólunnar. Kóðinn les in kvörðun í frá .dat skrá sem drstein_cal.py gefur frá sér.
 spenna_magnari_Ls.py er notuður til þess að stilla segulsviðið á litlu spólunni. Kóðinnn les einnig .dat skrá en hún kemur frá drstein_cal_Ls.py.
 breyting
+
+FMR_ZNB_alphaIEC.py is the latest version of the FMR code, it includes analysis features for interlayer exchange coupling of trilayers. But does not allow for measurements with the new waveguide sampleholder.
