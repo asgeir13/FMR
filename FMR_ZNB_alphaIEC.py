@@ -2725,7 +2725,7 @@ class Viewer2(tk.Frame):
             self.nfreq=self.freq[np.where(self.freq>0.3e10)]
             self.real=self.chii.real[np.where(self.freq>0.3e10)]
             self.nimag=self.chii.imag[np.where(self.freq>0.3e10)]
-		
+        
         if self.axismin.get() !='0':
             self.chi()
             self.imag=self.chii.imag
@@ -2863,15 +2863,15 @@ class Viewer2(tk.Frame):
                 re='Re(\u1d61) '+item.split('/')[-1]
                 im='Im(\u1d61) '+item.split('/')[-1]
 
-            if self.Re.get()==1 or self.Im.get()==1:
-            	if self.Re.get()==1:
-            		self.ax.plot(self.freq,self.chii.real,label=re)
-            	else:
-            		self.ax.plot(self.freq,self.chii.imag,label=im)
+            if self.Re.get()==1:
+                self.ax.plot(self.freq,self.chii.real,label=re)
+            elif self.Im.get()==1:
+                self.ax.plot(self.freq,self.chii.imag,label=im)
             else:
-            	self.ax.plot(self.freq,self.chii.real,label=re)
-            	self.ax.plot(self.freq,self.chii.imag,label=im)
+                self.ax.plot(self.freq,self.chii.real,label=re)
+                self.ax.plot(self.freq,self.chii.imag,label=im)
             
+                        
             if self.custvar.get()==1:
                 self.legendliststr=[]
                 for i in range(0,self.n):
@@ -3722,7 +3722,7 @@ class Viewer2(tk.Frame):
                 self.entryShift.insert(0, result.params['shift'].value)
                 self.entryKu.delete(0,"end")
                 self.entryKu.insert(0,result.params['Ku'].value)
-			
+            
 
             elif selected == 'Cubic Koh (100)+uni':
                 try:
@@ -3799,7 +3799,7 @@ class Viewer2(tk.Frame):
                 self.entryKc.insert(0,result.params['Kc'].value)
                 self.entryPsi.delete(0,"end")
                 self.entryPsi.insert(0,result.params['psi'].value)
-			
+            
 
             elif selected == 'Cubic Koh (110)':
                 try:
