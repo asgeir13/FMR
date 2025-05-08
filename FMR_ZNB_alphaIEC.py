@@ -1806,13 +1806,12 @@ class IEC(tk.Frame):
                 re='Re(\u1d61) '+item.split('/')[-1]
                 im='Im(\u1d61) '+item.split('/')[-1]
 
-            if self.Re.get()==1 or self.Im.get()==1:
-            	if self.Re.get()==1:
-            		self.ax.plot(self.freq,self.chii.real,label=re)
-            	else:
-            		self.ax.plot(self.freq,self.chii.imag,label=im)
-            else:
+            if self.Re.get()==1:
                 self.ax.plot(self.freq,self.chii.real,label=re)
+            elif self.Im.get()==1:
+                self.ax.plot(self.freq,self.chii.imag,label=im)
+            else:
+                self.ax.plot(self.freq,self.chii.real,label=re)                    
                 self.ax.plot(self.freq,self.chii.imag,label=im)
 
         if self.axismin.get() !='0':
