@@ -2094,7 +2094,7 @@ class IEC(tk.Frame):
         self.nfreq=self.freq[np.where(self.freq>0.3e10)]
         self.real=self.chii.real[np.where(self.freq>0.3e10)]
         self.nimag=self.chii.imag[np.where(self.freq>0.3e10)]
-		
+        
         if self.axismin.get() !='0':
             self.chi()
             self.imag=self.chii.imag
